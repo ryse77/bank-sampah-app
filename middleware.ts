@@ -2,26 +2,13 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get('auth-storage')?.value;
-  const { pathname } = request.nextUrl;
-
-  // Public routes
-  const publicRoutes = ['/', '/login', '/register'];
-  
-  if (publicRoutes.includes(pathname)) {
-    return NextResponse.next();
-  }
-
-  // Protected routes - check if token exists
-  if (!token && pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
+  // Jangan block apapun untuk sementara
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    // Exclude files yang tidak perlu di-check
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

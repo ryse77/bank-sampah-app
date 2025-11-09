@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !user) {
+      console.error('User not found:', error);
       return NextResponse.json(
         { error: 'Email atau password salah' },
         { status: 401 }
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
+      console.error('Invalid password');
       return NextResponse.json(
         { error: 'Email atau password salah' },
         { status: 401 }
@@ -43,6 +45,8 @@ export async function POST(request: NextRequest) {
       id: user.id,
       role: user.role
     });
+
+    console.log('Login successful for:', user.email, 'Role:', user.role);
 
     return NextResponse.json({
       token,
