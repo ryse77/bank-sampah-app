@@ -4,12 +4,13 @@ import { requireRole } from '@/lib/auth';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = requireRole(request, ['admin']);
   if (user instanceof Response) return user;
 
   try {
+    const { id } = await params;
     const { judul, konten, gambar } = await request.json();
 
     const updateData: any = {};
@@ -20,7 +21,7 @@ export async function PUT(
     const { data, error } = await supabaseAdmin
       .from('artikel')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 

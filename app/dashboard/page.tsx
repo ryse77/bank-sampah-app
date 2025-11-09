@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const { user, token, logout, _hasHydrated, setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalSetoran: 0,
     pendingValidation: 0,
@@ -227,8 +228,9 @@ export default function DashboardPage() {
 
       case 'pengelola':
         return [
+          { title: 'Scan QR', icon: '📱', href: '/dashboard/scan', color: 'blue' },
           { title: 'Antrian Sampah', icon: '⏳', href: '/dashboard/antrian-sampah', color: 'orange' },
-          { title: 'Riwayat Sampah', icon: '📋', href: '/dashboard/riwayat-sampah', color: 'blue' },
+          { title: 'Riwayat Sampah', icon: '📋', href: '/dashboard/riwayat-sampah', color: 'green' },
           { title: 'Pencairan', icon: '💸', href: '/dashboard/pencairan', color: 'purple' },
           { title: 'Member', icon: '👥', href: '/dashboard/member', color: 'teal' },
           { title: 'Laporan', icon: '📊', href: '/dashboard/laporan', color: 'indigo' },
@@ -236,9 +238,10 @@ export default function DashboardPage() {
 
       case 'admin':
         return [
+          { title: 'Scan QR', icon: '📱', href: '/dashboard/scan', color: 'blue' },
           { title: 'Antrian Sampah', icon: '⏳', href: '/dashboard/antrian-sampah', color: 'orange' },
-          { title: 'Riwayat Sampah', icon: '📋', href: '/dashboard/riwayat-sampah', color: 'blue' },
-          { title: 'Artikel', icon: '📝', href: '/dashboard/artikel', color: 'green' },
+          { title: 'Riwayat Sampah', icon: '📋', href: '/dashboard/riwayat-sampah', color: 'green' },
+          { title: 'Artikel', icon: '📝', href: '/dashboard/artikel', color: 'yellow' },
           { title: 'Pencairan', icon: '💸', href: '/dashboard/pencairan', color: 'purple' },
           { title: 'Member', icon: '👥', href: '/dashboard/member', color: 'teal' },
           { title: 'Laporan', icon: '📊', href: '/dashboard/laporan', color: 'indigo' },
@@ -251,6 +254,13 @@ export default function DashboardPage() {
 
   const menuItems = getMenuItems();
 
+  // Generate kode unik 3 digit dari user ID
+  const getUserCode = () => {
+    if (!user) return '';
+    // Ambil 3 karakter terakhir dari ID dan convert ke uppercase
+    return user.id.slice(-3).toUpperCase();
+  };
+
   return (
     <div>
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-8 mb-8 text-white">
@@ -258,10 +268,25 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-3xl font-bold mb-2">Halo, {user.nama_lengkap}! 👋</h2>
               <p className="text-green-100 mb-1">{user.email}</p>
-              <div className="inline-block px-3 py-1 bg-white text-gray-800 rounded-full text-sm font-medium mt-2">
-                {user.role === 'admin' && 'Admin'}
-                {user.role === 'pengelola' && 'Pengelola'}
-                {user.role === 'pengguna' && 'Member'}
+              <div className="flex items-center gap-2 mt-2">
+                <div className="inline-block px-3 py-1 bg-white text-gray-800 rounded-full text-sm font-medium">
+                  {user.role === 'admin' && 'Admin'}
+                  {user.role === 'pengelola' && 'Pengelola'}
+                  {user.role === 'pengguna' && 'Member'}
+                </div>
+                {user.role === 'pengguna' && (
+                  <>
+                    <div className="inline-block px-3 py-1 bg-yellow-400 text-gray-900 rounded-full text-sm font-bold">
+                      ID: {getUserCode()}
+                    </div>
+                    <button
+                      onClick={() => setShowQRModal(true)}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-white text-green-600 rounded-full text-sm font-medium hover:bg-green-50 transition-colors"
+                    >
+                      📱 Lihat QR
+                    </button>
+                  </>
+                )}
               </div>
             </div>
             {user.role === 'pengguna' && (
@@ -291,7 +316,7 @@ export default function DashboardPage() {
         )}
 
         {/* Stats Cards - berbeda per role */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className={`grid grid-cols-1 ${user.role === 'admin' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 mb-8`}>
           {user.role === 'pengguna' && (
             <>
               <div className="bg-white rounded-lg shadow p-6">
@@ -325,9 +350,9 @@ export default function DashboardPage() {
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
-                <p className="text-sm text-gray-600 mb-1">Antrian Validasi</p>
+                <p className="text-sm text-gray-600 mb-1">Total Antrian Sampah</p>
                 <p className="text-3xl font-bold text-orange-600">{stats.pendingValidation}</p>
-                <p className="text-sm text-orange-600 mt-1">Perlu divalidasi</p>
+                <p className="text-sm text-orange-600 mt-1">Belum tervalidasi</p>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
@@ -344,6 +369,12 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mb-1">Total Member</p>
                 <p className="text-3xl font-bold text-blue-600">{stats.totalMember}</p>
                 <p className="text-sm text-blue-600 mt-1">Semua member</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <p className="text-sm text-gray-600 mb-1">Total Antrian Sampah</p>
+                <p className="text-3xl font-bold text-orange-600">{stats.pendingValidation}</p>
+                <p className="text-sm text-orange-600 mt-1">Belum tervalidasi</p>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
@@ -397,6 +428,44 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+
+        {/* Modal QR Code */}
+        {showQRModal && user.role === 'pengguna' && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">QR Code Anda</h3>
+                <p className="text-gray-600 mb-6">Tunjukkan QR ini saat melakukan setoran sampah</p>
+
+                <div className="bg-gray-50 rounded-lg p-6 mb-4">
+                  {user.qr_code ? (
+                    <img
+                      src={user.qr_code}
+                      alt="QR Code"
+                      className="w-64 h-64 mx-auto"
+                    />
+                  ) : (
+                    <div className="w-64 h-64 mx-auto flex items-center justify-center bg-gray-200 rounded-lg">
+                      <p className="text-gray-500">QR Code tidak tersedia</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-yellow-800 mb-1">Kode Unik Anda</p>
+                  <p className="text-3xl font-bold text-yellow-900">{getUserCode()}</p>
+                </div>
+
+                <button
+                  onClick={() => setShowQRModal(false)}
+                  className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }

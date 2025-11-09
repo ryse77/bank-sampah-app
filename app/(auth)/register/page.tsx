@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
@@ -8,7 +8,9 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
+  const [emailError, setEmailError] = useState('');
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
   const [formData, setFormData] = useState({
     nama_lengkap: '',
     email: '',
@@ -60,6 +62,54 @@ export default function RegisterPage() {
     });
   };
 
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || email.length < 5) {
+      setEmailError('');
+      return;
+    }
+
+    // Validasi format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('');
+      return;
+    }
+
+    setCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!data.available) {
+        setEmailError('Email sudah terdaftar');
+      } else {
+        setEmailError('');
+      }
+    } catch (error) {
+      console.error('Check email error:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Debounce email check
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (formData.email) {
+        checkEmailAvailability(formData.email);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.email]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-12">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
@@ -99,14 +149,30 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email *
             </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
-            />
+            <div className="relative">
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                  emailError
+                    ? 'border-red-300 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-green-500'
+                }`}
+                required
+              />
+              {checkingEmail && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                </div>
+              )}
+            </div>
+            {emailError && (
+              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                <span>⚠️</span> {emailError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -204,10 +270,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || emailError !== '' || checkingEmail}
             className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {loading ? 'Mendaftar...' : 'Daftar'}
+            {loading ? 'Mendaftar...' : checkingEmail ? 'Mengecek email...' : 'Daftar'}
           </button>
         </form>
 

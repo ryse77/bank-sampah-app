@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { memberService } from '@/lib/api';
 import { User } from '@/lib/types';
-import { Users, Search, MessageCircle, UserPlus, Trash2 } from 'lucide-react';
+import { Users, Search, MessageCircle, UserPlus, Trash2, Eye, X } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/authStore';
 
@@ -14,6 +14,10 @@ export default function MemberPage() {
   const [roleFilter, setRoleFilter] = useState('pengguna');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<User | null>(null);
+  const [emailError, setEmailError] = useState('');
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [createFormData, setCreateFormData] = useState({
     nama_lengkap: '',
     email: '',
@@ -92,6 +96,7 @@ export default function MemberPage() {
 
       alert('Akun berhasil dibuat!');
       setShowCreateModal(false);
+      setEmailError('');
       setCreateFormData({
         nama_lengkap: '',
         email: '',
@@ -136,6 +141,59 @@ export default function MemberPage() {
     }
   };
 
+  const handleViewDetail = (member: User) => {
+    setSelectedMember(member);
+    setShowDetailModal(true);
+  };
+
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || email.length < 5) {
+      setEmailError('');
+      return;
+    }
+
+    // Validasi format email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setEmailError('');
+      return;
+    }
+
+    setCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!data.available) {
+        setEmailError('Email sudah terdaftar');
+      } else {
+        setEmailError('');
+      }
+    } catch (error) {
+      console.error('Check email error:', error);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
+
+  // Debounce email check
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (createFormData.email && showCreateModal) {
+        checkEmailAvailability(createFormData.email);
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [createFormData.email, showCreateModal]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -159,7 +217,10 @@ export default function MemberPage() {
 
         {isAdmin && (
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {
+              setShowCreateModal(true);
+              setEmailError('');
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             <UserPlus className="w-5 h-5" />
@@ -290,6 +351,15 @@ export default function MemberPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex gap-2">
                         <button
+                          onClick={() => handleViewDetail(member)}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                          title="Lihat Detail"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span className="hidden sm:inline">Detail</span>
+                        </button>
+
+                        <button
                           onClick={() => handleWhatsApp(member.no_hp, member.nama_lengkap)}
                           disabled={!member.no_hp}
                           className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -323,10 +393,128 @@ export default function MemberPage() {
         </div>
       </div>
 
+      {/* Modal Detail Member */}
+      {showDetailModal && selectedMember && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-6 my-8 mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Detail Member</h3>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedMember(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Avatar dan Nama */}
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center">
+                  <span className="text-indigo-600 font-bold text-3xl">
+                    {selectedMember.nama_lengkap.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="text-2xl font-bold text-gray-800">{selectedMember.nama_lengkap}</h4>
+                  <span className="inline-block mt-2 px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
+                    {selectedMember.role}
+                  </span>
+                </div>
+              </div>
+
+              {/* Informasi Kontak */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
+                  <p className="text-gray-900 font-medium">{selectedMember.email}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Nomor HP</label>
+                  <p className="text-gray-900 font-medium">{selectedMember.no_hp || '-'}</p>
+                </div>
+              </div>
+
+              {/* Alamat */}
+              <div className="pt-2">
+                <label className="block text-sm font-medium text-gray-500 mb-2">Alamat Lengkap</label>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500">Kelurahan</p>
+                      <p className="text-gray-900 font-medium">{selectedMember.kelurahan || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Kecamatan</p>
+                      <p className="text-gray-900 font-medium">{selectedMember.kecamatan || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Kabupaten</p>
+                      <p className="text-gray-900 font-medium">{selectedMember.kabupaten || '-'}</p>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-500">Detail Alamat</p>
+                    <p className="text-gray-900 font-medium">{selectedMember.detail_alamat || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informasi Saldo dan Tanggal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-green-700 mb-1">Saldo</label>
+                  <p className="text-2xl font-bold text-green-600">
+                    Rp {parseFloat(selectedMember.saldo.toString()).toLocaleString('id-ID')}
+                  </p>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <label className="block text-sm font-medium text-blue-700 mb-1">Tanggal Bergabung</label>
+                  <p className="text-lg font-bold text-blue-600">
+                    {new Date(selectedMember.created_at).toLocaleDateString('id-ID', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+              {selectedMember.no_hp && (
+                <button
+                  onClick={() => handleWhatsApp(selectedMember.no_hp, selectedMember.nama_lengkap)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Hubungi via WhatsApp
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedMember(null);
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Tambah Akun */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 my-8 mx-4">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Tambah Akun Baru</h3>
 
             <form onSubmit={handleCreateUser} className="space-y-4">
@@ -347,13 +535,29 @@ export default function MemberPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email *
                 </label>
-                <input
-                  type="email"
-                  value={createFormData.email}
-                  onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={createFormData.email}
+                    onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                      emailError
+                        ? 'border-red-300 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-indigo-500'
+                    }`}
+                    required
+                  />
+                  {checkingEmail && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                    </div>
+                  )}
+                </div>
+                {emailError && (
+                  <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                    <span>⚠️</span> {emailError}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -463,6 +667,7 @@ export default function MemberPage() {
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
+                    setEmailError('');
                     setCreateFormData({
                       nama_lengkap: '',
                       email: '',
@@ -481,9 +686,10 @@ export default function MemberPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  disabled={emailError !== '' || checkingEmail}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Buat Akun
+                  {checkingEmail ? 'Mengecek email...' : 'Buat Akun'}
                 </button>
               </div>
             </form>

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from('users')
-      .select('id, nama_lengkap, email, no_hp, role, saldo, created_at')
+      .select('id, nama_lengkap, email, no_hp, kelurahan, kecamatan, kabupaten, detail_alamat, role, saldo, created_at')
       .order('created_at', { ascending: false });
 
     // Filter by role

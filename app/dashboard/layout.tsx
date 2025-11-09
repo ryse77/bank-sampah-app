@@ -4,7 +4,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useState, useEffect } from 'react';
 import {
   Menu, X, Home, Trash2, History, Wallet, BookOpen,
-  FileText, Users, BarChart3, Clock, LogOut
+  FileText, Users, BarChart3, Clock, LogOut, ScanLine
 } from 'lucide-react';
 
 interface MenuItem {
@@ -53,6 +53,7 @@ export default function DashboardLayout({
       users: Users,
       chart: BarChart3,
       clock: Clock,
+      scan: ScanLine,
     };
 
     switch (user.role) {
@@ -69,6 +70,7 @@ export default function DashboardLayout({
       case 'pengelola':
         return [
           { title: 'Dashboard', icon: iconMap.home, href: '/dashboard' },
+          { title: 'Scan QR', icon: iconMap.scan, href: '/dashboard/scan' },
           { title: 'Antrian Sampah', icon: iconMap.clock, href: '/dashboard/antrian-sampah' },
           { title: 'Riwayat Sampah', icon: iconMap.history, href: '/dashboard/riwayat-sampah' },
           { title: 'Pencairan', icon: iconMap.wallet, href: '/dashboard/pencairan' },
@@ -79,6 +81,7 @@ export default function DashboardLayout({
       case 'admin':
         return [
           { title: 'Dashboard', icon: iconMap.home, href: '/dashboard' },
+          { title: 'Scan QR', icon: iconMap.scan, href: '/dashboard/scan' },
           { title: 'Antrian Sampah', icon: iconMap.clock, href: '/dashboard/antrian-sampah' },
           { title: 'Riwayat Sampah', icon: iconMap.history, href: '/dashboard/riwayat-sampah' },
           { title: 'Artikel', icon: iconMap.file, href: '/dashboard/artikel' },

@@ -4,16 +4,18 @@ import { requireRole } from '@/lib/auth';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = requireRole(request, ['admin']);
   if (user instanceof Response) return user;
 
   try {
+    const { id } = await params;
+
     const { error } = await supabaseAdmin
       .from('artikel')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       return NextResponse.json(
