@@ -10,7 +10,7 @@ export default function PencairanPage() {
   const { user } = useAuthStore();
   const [pencairan, setPencairan] = useState<Pencairan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [selectedPencairan, setSelectedPencairan] = useState<Pencairan | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [action, setAction] = useState<'approved' | 'rejected'>('approved');

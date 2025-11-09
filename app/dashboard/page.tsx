@@ -22,9 +22,17 @@ interface DashboardStats {
   setoranHariIni: number;
 }
 
+interface Artikel {
+  id: string;
+  judul: string;
+  konten: string;
+  created_at: string;
+}
+
 export default function DashboardPage() {
   const { user, token, logout, _hasHydrated, setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalSetoran: 0,
     pendingValidation: 0,
@@ -82,6 +90,28 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchLatestArtikel = async () => {
+    if (!user || !token) return;
+
+    try {
+      const response = await fetch('/api/artikel/list?limit=1&offset=0', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const artikels = result.data || [];
+        if (artikels.length > 0) {
+          setLatestArtikel(artikels[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching latest artikel:', error);
     }
   };
 
@@ -159,6 +189,7 @@ export default function DashboardPage() {
       if (user.role === 'pengguna') {
         fetchUserData();
         fetchStats();
+        fetchLatestArtikel();
       } else if (user.role === 'admin' || user.role === 'pengelola') {
         fetchAdminPengelolaStats();
       }
@@ -243,6 +274,21 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Latest Article - hanya untuk pengguna */}
+        {user.role === 'pengguna' && latestArtikel && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
+            <p className="text-blue-800 font-medium">
+              <span className="font-semibold">Artikel Terbaru:</span>{' '}
+              <a
+                href={`/dashboard/edukasi/${latestArtikel.id}`}
+                className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              >
+                {latestArtikel.judul}
+              </a>
+            </p>
+          </div>
+        )}
 
         {/* Stats Cards - berbeda per role */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

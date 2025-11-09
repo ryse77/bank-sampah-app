@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { setoranService } from '@/lib/api';
 import { Setoran } from '@/lib/types';
-import { ListChecks, Package, Truck, MessageCircle } from 'lucide-react';
+import { ListChecks, Package, Truck, MessageCircle, Search } from 'lucide-react';
 
 export default function AntrianSampahPage() {
   const [antrianPickup, setAntrianPickup] = useState<Setoran[]>([]);
   const [antrianDropoff, setAntrianDropoff] = useState<Setoran[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedSetoran, setSelectedSetoran] = useState<Setoran | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -87,6 +88,15 @@ export default function AntrianSampahPage() {
     window.open(whatsappUrl, '_blank');
   };
 
+  // Filter data berdasarkan search query
+  const filteredPickup = antrianPickup.filter((item) =>
+    item.users?.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredDropoff = antrianDropoff.filter((item) =>
+    item.users?.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const SetoranCard = ({ item }: { item: Setoran }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
@@ -150,22 +160,38 @@ export default function AntrianSampahPage() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Cari nama member..."
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Pick-up */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <Truck className="w-5 h-5 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-800">
-              Pick-up ({antrianPickup.length})
+              Pick-up ({filteredPickup.length})
             </h2>
           </div>
           <div className="space-y-3">
-            {antrianPickup.length === 0 ? (
+            {filteredPickup.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-8 text-center">
-                <p className="text-gray-500">Tidak ada antrian pick-up</p>
+                <p className="text-gray-500">
+                  {searchQuery ? 'Tidak ada hasil pencarian' : 'Tidak ada antrian pick-up'}
+                </p>
               </div>
             ) : (
-              antrianPickup.map((item) => (
+              filteredPickup.map((item) => (
                 <SetoranCard key={item.id} item={item} />
               ))
             )}
@@ -177,16 +203,18 @@ export default function AntrianSampahPage() {
           <div className="flex items-center gap-2 mb-4">
             <Package className="w-5 h-5 text-green-600" />
             <h2 className="text-lg font-semibold text-gray-800">
-              Drop-off ({antrianDropoff.length})
+              Drop-off ({filteredDropoff.length})
             </h2>
           </div>
           <div className="space-y-3">
-            {antrianDropoff.length === 0 ? (
+            {filteredDropoff.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-8 text-center">
-                <p className="text-gray-500">Tidak ada antrian drop-off</p>
+                <p className="text-gray-500">
+                  {searchQuery ? 'Tidak ada hasil pencarian' : 'Tidak ada antrian drop-off'}
+                </p>
               </div>
             ) : (
-              antrianDropoff.map((item) => (
+              filteredDropoff.map((item) => (
                 <SetoranCard key={item.id} item={item} />
               ))
             )}
