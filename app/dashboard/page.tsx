@@ -283,25 +283,25 @@ export default function DashboardPage() {
 
   return (
     <div>
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-8 mb-8 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold mb-2">Halo, {user.nama_lengkap}! 👋</h2>
-              <p className="text-green-100 mb-1">{user.email}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <div className="inline-block px-3 py-1 bg-white text-gray-800 rounded-full text-sm font-medium">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mb-8 text-white">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">Halo, {user.nama_lengkap}! 👋</h2>
+              <p className="text-green-100 mb-1 text-sm sm:text-base break-all">{user.email}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <div className="inline-block px-3 py-1 bg-white text-gray-800 rounded-full text-xs sm:text-sm font-medium">
                   {user.role === 'admin' && 'Admin'}
                   {user.role === 'pengelola' && 'Pengelola'}
                   {user.role === 'pengguna' && 'Member'}
                 </div>
                 {user.role === 'pengguna' && (
                   <>
-                    <div className="inline-block px-3 py-1 bg-yellow-400 text-gray-900 rounded-full text-sm font-bold">
+                    <div className="inline-block px-3 py-1 bg-yellow-400 text-gray-900 rounded-full text-xs sm:text-sm font-bold">
                       ID: {getUserCode()}
                     </div>
                     <button
                       onClick={() => setShowQRModal(true)}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-white text-green-600 rounded-full text-sm font-medium hover:bg-green-50 transition-colors"
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-white text-green-600 rounded-full text-xs sm:text-sm font-medium hover:bg-green-50 transition-colors"
                     >
                       📱 Lihat QR
                     </button>
@@ -310,9 +310,9 @@ export default function DashboardPage() {
               </div>
             </div>
             {user.role === 'pengguna' && (
-              <div className="text-right">
-                <p className="text-green-100 text-sm mb-1">Saldo Anda</p>
-                <p className="text-4xl font-bold">
+              <div className="text-left sm:text-right w-full sm:w-auto">
+                <p className="text-green-100 text-xs sm:text-sm mb-1">Saldo Anda</p>
+                <p className="text-2xl sm:text-3xl lg:text-4xl font-bold break-words">
                   Rp {stats.saldoTersedia.toLocaleString('id-ID')}
                 </p>
               </div>
