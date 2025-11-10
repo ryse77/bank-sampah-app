@@ -8,10 +8,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Insert default CS WhatsApp number
+-- Insert default settings
 INSERT INTO app_settings (setting_key, setting_value, description)
 VALUES
-  ('cs_whatsapp_number', '6281234567890', 'Nomor WhatsApp Customer Service')
+  ('cs_whatsapp_number', '6281234567890', 'Nomor WhatsApp Customer Service'),
+  ('app_download_link', 'https://example.com/download', 'Link download aplikasi mobile')
 ON CONFLICT (setting_key) DO NOTHING;
 
 -- Create index for faster lookups
