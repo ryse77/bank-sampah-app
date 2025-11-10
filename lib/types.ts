@@ -62,4 +62,5 @@ export interface Artikel {
   gambar?: string;
   admin_id: string;
   created_at: string;
-  updated_at:# Panduan Pengembangan Aplikasi Bank Sampah dengan Next.js
+  updated_at: string;
+}

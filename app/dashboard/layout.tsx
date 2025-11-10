@@ -4,7 +4,7 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useState, useEffect } from 'react';
 import {
   Menu, X, Home, Trash2, History, Wallet, BookOpen,
-  FileText, Users, BarChart3, Clock, LogOut, ScanLine
+  FileText, Users, BarChart3, Clock, LogOut, ScanLine, Settings, MessageCircle
 } from 'lucide-react';
 
 interface MenuItem {
@@ -18,9 +18,10 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, _hasHydrated } = useAuthStore();
+  const { user, logout, _hasHydrated, token } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [csWhatsapp, setCsWhatsapp] = useState('');
 
   useEffect(() => {
     setIsMounted(true);
@@ -33,6 +34,27 @@ export default function DashboardLayout({
       window.location.href = '/login';
     }
   }, [user, _hasHydrated]);
+
+  // Fetch CS WhatsApp number
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCsWhatsapp(data.cs_whatsapp_number?.value || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings:', err);
+      }
+    };
+
+    fetchSettings();
+  }, [token, user]);
 
   if (!isMounted || !_hasHydrated || !user) {
     return (
@@ -54,6 +76,7 @@ export default function DashboardLayout({
       chart: BarChart3,
       clock: Clock,
       scan: ScanLine,
+      settings: Settings,
     };
 
     switch (user.role) {
@@ -88,6 +111,7 @@ export default function DashboardLayout({
           { title: 'Pencairan', icon: iconMap.wallet, href: '/dashboard/pencairan' },
           { title: 'Member', icon: iconMap.users, href: '/dashboard/member' },
           { title: 'Laporan', icon: iconMap.chart, href: '/dashboard/laporan' },
+          { title: 'Pengaturan', icon: iconMap.settings, href: '/dashboard/settings' },
         ];
 
       default:
@@ -178,6 +202,21 @@ export default function DashboardLayout({
             })}
           </ul>
         </nav>
+
+        {/* Hubungi CS Button */}
+        {csWhatsapp && (
+          <div className="p-4 border-t">
+            <a
+              href={`https://wa.me/${csWhatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 w-full px-4 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="font-medium">Hubungi CS</span>
+            </a>
+          </div>
+        )}
 
         {/* Logout Button */}
         <div className="p-4 border-t">

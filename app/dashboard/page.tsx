@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [csWhatsapp, setCsWhatsapp] = useState('');
   const [stats, setStats] = useState<DashboardStats>({
     totalSetoran: 0,
     pendingValidation: 0,
@@ -174,6 +175,22 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchSettings = async () => {
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/settings', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCsWhatsapp(data.cs_whatsapp_number?.value || '');
+      }
+    } catch (err) {
+      console.error('Failed to fetch settings:', err);
+    }
+  };
+
   useEffect(() => {
     // Tunggu hingga store selesai hydrate dari localStorage
     if (!_hasHydrated) {
@@ -186,6 +203,9 @@ export default function DashboardPage() {
       window.location.href = '/login';
     } else {
       console.log('User authenticated:', user.nama_lengkap);
+
+      // Fetch settings for all users
+      fetchSettings();
 
       if (user.role === 'pengguna') {
         fetchUserData();
@@ -428,6 +448,27 @@ export default function DashboardPage() {
             })}
           </div>
         </div>
+
+        {/* Hubungi CS Button */}
+        {csWhatsapp && (
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white mt-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-xl font-bold mb-2">Butuh Bantuan?</h3>
+                <p className="text-green-100">Tim Customer Service kami siap membantu Anda</p>
+              </div>
+              <a
+                href={`https://wa.me/${csWhatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium shadow-md"
+              >
+                <span className="text-xl">💬</span>
+                <span>Hubungi CS</span>
+              </a>
+            </div>
+          </div>
+        )}
 
         {/* Modal QR Code */}
         {showQRModal && user.role === 'pengguna' && (

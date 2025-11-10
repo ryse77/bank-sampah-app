@@ -327,19 +327,19 @@ export default function ScanPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Kode Unik Member (3 digit)
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
                   placeholder="Contoh: ABC"
                   maxLength={3}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg font-mono uppercase"
+                  className="w-full sm:flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-lg font-mono uppercase"
                   required
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+                  className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2 whitespace-nowrap"
                 >
                   <Search className="w-5 h-5" />
                   Cari
