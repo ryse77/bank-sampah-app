@@ -45,6 +45,7 @@ export default function LaporanPage() {
     totalNominalPencairan: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [topMembers, setTopMembers] = useState<TopMember[]>([]);
   const [jenisSampahList, setJenisSampahList] = useState<JenisSampah[]>([]);
   const [totalBeratKeseluruhan, setTotalBeratKeseluruhan] = useState(0);
@@ -207,16 +208,58 @@ export default function LaporanPage() {
     }
   };
 
-  const handleExport = () => {
-    const url = laporanService.export(type, startDate, endDate);
+  const handleExport = async () => {
+    if (!token) {
+      alert('Anda harus login terlebih dahulu');
+      return;
+    }
 
-    // Create temporary link and trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `laporan-${type}-${new Date().toISOString().split('T')[0]}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    setExporting(true);
+
+    try {
+      // Build URL dengan parameters
+      const params = new URLSearchParams({ type });
+      if (startDate) params.append('start_date', startDate);
+      if (endDate) params.append('end_date', endDate);
+
+      const url = `/api/laporan/export?${params.toString()}`;
+
+      // Fetch dengan Authorization header
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Gagal mengexport laporan');
+      }
+
+      // Get blob dari response
+      const blob = await response.blob();
+
+      // Create object URL dari blob
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create temporary link dan trigger download
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = `laporan-${type}-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+
+      alert('Laporan berhasil diexport!');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      alert(error.message || 'Gagal mengexport laporan');
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
