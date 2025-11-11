@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '@/lib/store/authStore';
 import { useEffect, useState } from 'react';
+import { clearAllCache } from '@/lib/cache-utils';
 
 interface MenuItem {
   title: string;
@@ -32,6 +33,7 @@ interface Artikel {
 export default function DashboardPage() {
   const { user, token, logout, _hasHydrated, setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
   const [showQRModal, setShowQRModal] = useState(false);
   const [csWhatsapp, setCsWhatsapp] = useState('');
@@ -117,9 +119,48 @@ export default function DashboardPage() {
     }
   };
 
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+
+    // Reset stats to 0 first to show fresh data
+    setStats({
+      totalSetoran: 0,
+      pendingValidation: 0,
+      saldoTersedia: 0,
+      totalMember: 0,
+      totalSetoranAll: 0,
+      totalPencairan: 0,
+      setoranHariIni: 0
+    });
+
+    try {
+      if (user?.role === 'pengguna') {
+        await Promise.all([fetchUserData(), fetchStats(), fetchLatestArtikel()]);
+      } else if (user?.role === 'admin' || user?.role === 'pengelola') {
+        await fetchAdminPengelolaStats();
+      }
+    } catch (error) {
+      console.error('Manual refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const fetchAdminPengelolaStats = async () => {
     if (!user || !token) return;
     if (user.role !== 'admin' && user.role !== 'pengelola') return;
+
+    // Reset stats ke 0 sebelum fetch untuk avoid stale data
+    setStats({
+      totalSetoran: 0,
+      pendingValidation: 0,
+      saldoTersedia: 0,
+      totalMember: 0,
+      totalSetoranAll: 0,
+      totalPencairan: 0,
+      setoranHariIni: 0
+    });
 
     try {
       // Fetch total members
@@ -196,6 +237,9 @@ export default function DashboardPage() {
     if (!_hasHydrated) {
       return;
     }
+
+    // CRITICAL: Clear browser cache saat dashboard load
+    clearAllCache().catch(err => console.error('Cache clear error:', err));
 
     // Setelah hydrate selesai, cek apakah ada user
     if (!user) {
@@ -312,7 +356,25 @@ export default function DashboardPage() {
         <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg p-4 sm:p-6 lg:p-8 mb-8 text-white">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex-1">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 break-words">Halo, {user.nama_lengkap}! 👋</h2>
+              <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold break-words">Halo, {user.nama_lengkap}! 👋</h2>
+                <button
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Refresh data"
+                >
+                  <svg
+                    className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
               <p className="text-green-100 mb-1 text-sm sm:text-base break-all">{user.email}</p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <div className="inline-block px-3 py-1 bg-white text-gray-800 rounded-full text-xs sm:text-sm font-medium">

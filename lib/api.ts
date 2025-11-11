@@ -10,6 +10,9 @@ export async function apiCall(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0',
     ...(options.headers as Record<string, string>),
   };
 
@@ -17,15 +20,18 @@ export async function apiCall(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Add cache busting untuk memastikan data selalu fresh
-  const cacheBuster = `_t=${Date.now()}`;
+  // AGGRESSIVE cache busting dengan multiple random parameters
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(7);
+  const cacheBuster = `_t=${timestamp}&_r=${random}&_v=${Date.now()}`;
   const separator = endpoint.includes('?') ? '&' : '?';
   const urlWithCacheBuster = `${API_URL}/api${endpoint}${separator}${cacheBuster}`;
 
   const response = await fetch(urlWithCacheBuster, {
     ...options,
     headers,
-    cache: 'no-store', // PENTING: Disable Next.js cache
+    cache: 'no-store', // Disable Next.js cache
+    next: { revalidate: 0 }, // Force revalidation
   });
 
   const data = await response.json();

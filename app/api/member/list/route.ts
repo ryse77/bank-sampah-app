@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
 
+// CRITICAL: Force dynamic rendering - disable ALL caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   const user = requireRole(request, ['admin', 'pengelola']);
   if (user instanceof Response) return user;
