@@ -1,27 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/authStore';
 import { setoranService } from '@/lib/api';
-import { Trash2, Package } from 'lucide-react';
+import { Trash2, Package, Loader2 } from 'lucide-react';
+import { JenisSampah } from '@/lib/types';
 
 export default function SetorSampahPage() {
   const router = useRouter();
+  const { token } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [loadingJenisSampah, setLoadingJenisSampah] = useState(true);
+  const [jenisSampahOptions, setJenisSampahOptions] = useState<JenisSampah[]>([]);
   const [formData, setFormData] = useState({
     jenis_sampah: '',
     metode: 'drop-off' as 'pick-up' | 'drop-off',
   });
 
-  const jenisSampahOptions = [
-    'Plastik',
-    'Kertas',
-    'Botol Kaca',
-    'Botol Plastik',
-    'Kardus',
-    'Kaleng',
-    'Elektronik',
-  ];
+  // Fetch jenis sampah dari API
+  useEffect(() => {
+    const fetchJenisSampah = async () => {
+      if (!token) return;
+
+      try {
+        setLoadingJenisSampah(true);
+        const response = await fetch('/api/jenis-sampah?active=true', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          setJenisSampahOptions(result.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch jenis sampah:', error);
+        // Fallback to default options if fetch fails
+        setJenisSampahOptions([
+          { id: '1', nama: 'Plastik', is_active: true, created_at: '', updated_at: '' },
+          { id: '2', nama: 'Kertas', is_active: true, created_at: '', updated_at: '' },
+          { id: '3', nama: 'Kardus', is_active: true, created_at: '', updated_at: '' },
+        ]);
+      } finally {
+        setLoadingJenisSampah(false);
+      }
+    };
+
+    fetchJenisSampah();
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,19 +83,31 @@ export default function SetorSampahPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Jenis Sampah
             </label>
-            <select
-              value={formData.jenis_sampah}
-              onChange={(e) => setFormData({ ...formData, jenis_sampah: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              required
-            >
-              <option value="">Pilih jenis sampah</option>
-              {jenisSampahOptions.map((jenis) => (
-                <option key={jenis} value={jenis}>
-                  {jenis}
-                </option>
-              ))}
-            </select>
+            {loadingJenisSampah ? (
+              <div className="w-full px-4 py-2 border border-gray-300 rounded-lg flex items-center gap-2 text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Memuat jenis sampah...</span>
+              </div>
+            ) : (
+              <select
+                value={formData.jenis_sampah}
+                onChange={(e) => setFormData({ ...formData, jenis_sampah: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                required
+              >
+                <option value="">Pilih jenis sampah</option>
+                {jenisSampahOptions.map((jenis) => (
+                  <option key={jenis.id} value={jenis.nama}>
+                    {jenis.nama}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!loadingJenisSampah && jenisSampahOptions.length === 0 && (
+              <p className="text-sm text-red-600 mt-1">
+                Tidak ada jenis sampah yang tersedia. Hubungi admin.
+              </p>
+            )}
           </div>
 
           {/* Metode */}

@@ -65,3 +65,11 @@ export interface Artikel {
   created_at: string;
   updated_at: string;
 }
+
+export interface JenisSampah {
+  id: string;
+  nama: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
