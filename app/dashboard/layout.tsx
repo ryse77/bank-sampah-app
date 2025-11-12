@@ -139,12 +139,12 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-50 h-screen w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        } lg:translate-x-0 flex flex-col`}
       >
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-4 lg:p-6 border-b flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
               <Trash2 className="w-6 h-6 text-white" />
@@ -167,7 +167,7 @@ export default function DashboardLayout({
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-b bg-gradient-to-r from-green-50 to-green-100">
+        <div className="p-3 lg:p-4 border-b bg-gradient-to-r from-green-50 to-green-100 flex-shrink-0">
           <p className="text-sm font-medium text-gray-800 truncate">{user.nama_lengkap}</p>
           <p className="text-xs text-gray-600 truncate">{user.email}</p>
           {user.role === 'pengguna' && (
@@ -177,8 +177,8 @@ export default function DashboardLayout({
           )}
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 overflow-y-auto p-4">
+        {/* Navigation Menu - Scrollable */}
+        <nav className="flex-1 overflow-y-auto p-3 lg:p-4">
           <ul className="space-y-1">
             {menuItems.map((item, index) => {
               const Icon = item.icon;
@@ -188,14 +188,14 @@ export default function DashboardLayout({
                 <li key={index}>
                   <a
                     href={item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-green-600 text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.title}</span>
+                    <span className="font-medium text-sm lg:text-base">{item.title}</span>
                   </a>
                 </li>
               );
@@ -203,30 +203,33 @@ export default function DashboardLayout({
           </ul>
         </nav>
 
-        {/* Hubungi CS Button */}
-        {csWhatsapp && (
-          <div className="p-4 border-t">
-            <a
-              href={`https://wa.me/${csWhatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 w-full px-4 py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="font-medium">Hubungi CS</span>
-            </a>
-          </div>
-        )}
+        {/* Bottom Section - Always Visible */}
+        <div className="flex-shrink-0">
+          {/* Hubungi CS Button */}
+          {csWhatsapp && (
+            <div className="p-3 lg:p-4 border-t">
+              <a
+                href={`https://wa.me/${csWhatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 w-full px-4 py-2.5 lg:py-3 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span className="font-medium text-sm lg:text-base">Hubungi CS</span>
+              </a>
+            </div>
+          )}
 
-        {/* Logout Button */}
-        <div className="p-4 border-t">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </button>
+          {/* Logout Button */}
+          <div className="p-3 lg:p-4 border-t">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 w-full px-4 py-2.5 lg:py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium text-sm lg:text-base">Logout</span>
+            </button>
+          </div>
         </div>
       </aside>
 
