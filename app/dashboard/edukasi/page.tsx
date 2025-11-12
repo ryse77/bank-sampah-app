@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { artikelService } from '@/lib/api';
 import { BookOpen, Calendar, User } from 'lucide-react';
+import { getArtikelImageUrl } from '@/lib/artikel-utils';
 
 interface ArtikelData {
   id: string;
@@ -68,12 +69,13 @@ export default function EdukasiPage() {
         </button>
 
         <article className="bg-white rounded-lg shadow-lg overflow-hidden">
-          {selectedArtikel.gambar && (
+          {selectedArtikel.gambar && getArtikelImageUrl(selectedArtikel.gambar) && (
             <div className="w-full h-64 bg-gray-200 overflow-hidden">
               <img
-                src={selectedArtikel.gambar}
+                src={getArtikelImageUrl(selectedArtikel.gambar, 'desktop')}
                 alt={selectedArtikel.judul}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
             </div>
           )}
@@ -131,12 +133,13 @@ export default function EdukasiPage() {
               onClick={() => setSelectedArtikel(a)}
               className="bg-white rounded-lg shadow hover:shadow-xl transition-shadow cursor-pointer overflow-hidden"
             >
-              {a.gambar ? (
+              {a.gambar && getArtikelImageUrl(a.gambar) ? (
                 <div className="h-48 bg-gray-200 overflow-hidden">
                   <img
-                    src={a.gambar}
+                    src={getArtikelImageUrl(a.gambar, 'tablet')}
                     alt={a.judul}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                   />
                 </div>
               ) : (

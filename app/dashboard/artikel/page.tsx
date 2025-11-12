@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { artikelService } from '@/lib/api';
 import { BookOpen, Plus, Edit, Trash2 } from 'lucide-react';
+import { getArtikelImageUrl } from '@/lib/artikel-utils';
 
 interface Artikel {
   id: string;
@@ -96,12 +97,13 @@ export default function ArtikelPage() {
               key={artikel.id}
               className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden"
             >
-              {artikel.gambar && (
+              {artikel.gambar && getArtikelImageUrl(artikel.gambar) && (
                 <div className="h-48 bg-gray-200 overflow-hidden">
                   <img
-                    src={artikel.gambar}
+                    src={getArtikelImageUrl(artikel.gambar, 'tablet')}
                     alt={artikel.judul}
                     className="w-full h-full object-cover"
+                    loading="lazy"
                   />
                 </div>
               )}
