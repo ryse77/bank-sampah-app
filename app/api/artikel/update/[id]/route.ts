@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function PUT(
   request: NextRequest,
@@ -28,19 +28,10 @@ export async function PUT(
       }
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('artikel')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+    const data = await prisma.artikel.update({
+      where: { id },
+      data: updateData,
+    });
 
     return NextResponse.json({
       message: 'Artikel berhasil diupdate',

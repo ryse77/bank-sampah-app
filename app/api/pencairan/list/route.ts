@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
@@ -14,35 +14,39 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    let query = supabaseAdmin
-      .from('pencairan_saldo')
-      .select(`
-        *,
-        users:user_id (nama_lengkap, email, no_hp),
-        pengelola:pengelola_id (nama_lengkap)
-      `)
-      .order('tanggal_request', { ascending: false });
-
-    // Filter berdasarkan role
+    const where: Record<string, any> = {};
     if (user.role === 'pengguna') {
-      query = query.eq('user_id', user.id);
+      where.user_id = user.id;
     }
-
-    // Filter berdasarkan status jika ada
     if (status && status !== 'all') {
-      query = query.eq('status', status);
+      where.status = status;
     }
 
-    const { data, error } = await query;
+    const data = await prisma.pencairanSaldo.findMany({
+      where,
+      include: {
+        user: {
+          select: { nama_lengkap: true, email: true, no_hp: true }
+        },
+        pengelola: {
+          select: { nama_lengkap: true }
+        }
+      },
+      orderBy: { tanggal_request: 'desc' }
+    });
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+    const formatted = data.map(({ user: userData, pengelola, ...rest }) => ({
+      ...rest,
+      nominal: Number(rest.nominal),
+      users: userData ? {
+        nama_lengkap: userData.nama_lengkap,
+        email: userData.email,
+        no_hp: userData.no_hp
+      } : null,
+      pengelola: pengelola ? { nama_lengkap: pengelola.nama_lengkap } : null
+    }));
 
-    return NextResponse.json(data, {
+    return NextResponse.json(formatted, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',

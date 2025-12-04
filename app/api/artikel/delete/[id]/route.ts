@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function DELETE(
   request: NextRequest,
@@ -12,17 +12,9 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const { error } = await supabaseAdmin
-      .from('artikel')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+    await prisma.artikel.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       message: 'Artikel berhasil dihapus'

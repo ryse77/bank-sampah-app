@@ -11,6 +11,7 @@ export interface User {
   qr_code?: string;   // QR code image (Data URL)
   qr_data?: string;   // QR code data string for scanning
   saldo: number;
+  profile_completed: boolean;
   created_at: string;
   updated_at: string;
 }

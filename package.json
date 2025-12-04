@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "prisma:generate": "prisma generate",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^5.21.1",
     "@supabase/supabase-js": "^2.80.0",
     "bcryptjs": "^3.0.3",
     "browser-image-compression": "^2.0.2",
@@ -17,6 +20,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.553.0",
     "next": "16.0.1",
+    "prisma": "^5.21.1",
     "qrcode": "^1.5.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -37,6 +41,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.1",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }

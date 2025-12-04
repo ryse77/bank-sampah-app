@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // GET - Get all settings (accessible by all authenticated users)
 export async function GET(request: NextRequest) {
@@ -9,18 +9,9 @@ export async function GET(request: NextRequest) {
     const user = requireRole(request, ['admin', 'pengelola', 'pengguna']);
     if (user instanceof Response) return user;
 
-    const { data, error } = await supabaseAdmin
-      .from('app_settings')
-      .select('*')
-      .order('setting_key', { ascending: true });
-
-    if (error) {
-      console.error('Get settings error:', error);
-      return NextResponse.json(
-        { error: 'Gagal mengambil settings' },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.appSetting.findMany({
+      orderBy: { setting_key: 'asc' }
+    });
 
     // Convert array to object for easier access
     const settings: Record<string, any> = {};
@@ -58,54 +49,17 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Check if setting exists
-    const { data: existingSetting } = await supabaseAdmin
-      .from('app_settings')
-      .select('*')
-      .eq('setting_key', setting_key)
-      .single();
-
-    let data, error;
-
-    if (existingSetting) {
-      // Update existing setting
-      const result = await supabaseAdmin
-        .from('app_settings')
-        .update({
-          setting_value,
-          updated_at: new Date().toISOString()
-        })
-        .eq('setting_key', setting_key)
-        .select()
-        .single();
-
-      data = result.data;
-      error = result.error;
-    } else {
-      // Insert new setting
-      const result = await supabaseAdmin
-        .from('app_settings')
-        .insert({
-          setting_key,
-          setting_value,
-          description: setting_key === 'cs_whatsapp_number' ? 'Nomor WhatsApp Customer Service' : null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      data = result.data;
-      error = result.error;
-    }
-
-    if (error) {
-      console.error('Update settings error:', error);
-      return NextResponse.json(
-        { error: `Gagal update setting: ${error.message}` },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.appSetting.upsert({
+      where: { setting_key },
+      update: {
+        setting_value
+      },
+      create: {
+        setting_key,
+        setting_value,
+        description: setting_key === 'cs_whatsapp_number' ? 'Nomor WhatsApp Customer Service' : null,
+      }
+    });
 
     return NextResponse.json({
       message: 'Setting berhasil diupdate',

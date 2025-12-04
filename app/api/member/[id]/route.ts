@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
@@ -13,13 +13,11 @@ export async function GET(
 
   try {
     // Get user data
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const userData = await prisma.user.findUnique({
+      where: { id }
+    });
 
-    if (userError || !userData) {
+    if (!userData) {
       return NextResponse.json(
         { error: 'Member tidak ditemukan' },
         { status: 404 }
@@ -27,40 +25,53 @@ export async function GET(
     }
 
     // Get setoran history
-    const { data: setoranData } = await supabaseAdmin
-      .from('setoran_sampah')
-      .select('*')
-      .eq('user_id', id)
-      .order('tanggal_setor', { ascending: false })
-      .limit(10);
+    const setoranData = await prisma.setoranSampah.findMany({
+      where: { user_id: id },
+      orderBy: { tanggal_setor: 'desc' },
+      take: 10
+    });
 
     // Get pencairan history
-    const { data: pencairanData } = await supabaseAdmin
-      .from('pencairan_saldo')
-      .select('*')
-      .eq('user_id', id)
-      .order('tanggal_request', { ascending: false })
-      .limit(10);
+    const pencairanData = await prisma.pencairanSaldo.findMany({
+      where: { user_id: id },
+      orderBy: { tanggal_request: 'desc' },
+      take: 10
+    });
 
     // Calculate stats
     const totalSetoran = setoranData?.length || 0;
     const totalValidated = setoranData?.filter(s => s.status === 'validated').length || 0;
     const totalPencairan = pencairanData?.filter(p => p.status === 'approved').reduce(
-      (sum, p) => sum + parseFloat(p.nominal), 0
+      (sum, p) => sum + Number(p.nominal), 0
     ) || 0;
 
+    const sanitizedUser = {
+      ...userData,
+      password: undefined,
+      saldo: Number(userData.saldo ?? 0)
+    };
+
+    const setoranResponse = setoranData.map((s) => ({
+      ...s,
+      berat_sampah: s.berat_sampah !== null && s.berat_sampah !== undefined ? Number(s.berat_sampah) : null,
+      harga_per_kg: s.harga_per_kg !== null && s.harga_per_kg !== undefined ? Number(s.harga_per_kg) : null,
+      total_harga: s.total_harga !== null && s.total_harga !== undefined ? Number(s.total_harga) : null,
+    }));
+
+    const pencairanResponse = pencairanData.map((p) => ({
+      ...p,
+      nominal: Number(p.nominal)
+    }));
+
     return NextResponse.json({
-      user: {
-        ...userData,
-        password: undefined // Don't send password
-      },
+      user: sanitizedUser,
       stats: {
         totalSetoran,
         totalValidated,
         totalPencairan
       },
-      recentSetoran: setoranData,
-      recentPencairan: pencairanData
+      recentSetoran: setoranResponse,
+      recentPencairan: pencairanResponse
     });
 
   } catch (error) {

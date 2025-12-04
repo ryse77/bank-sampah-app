@@ -32,6 +32,16 @@ export default function DashboardLayout({
 
     if (!user) {
       window.location.href = '/login';
+      return;
+    }
+
+    const path = window.location.pathname;
+    if (
+      user.role === 'pengguna' &&
+      user.profile_completed === false &&
+      path !== '/dashboard/complete-profile'
+    ) {
+      window.location.href = '/dashboard/complete-profile';
     }
   }, [user, _hasHydrated]);
 

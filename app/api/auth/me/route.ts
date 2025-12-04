@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
@@ -12,21 +12,23 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch latest user data from database
-    const { data: userData, error } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
 
-    if (error) {
+    if (!userData) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
+        { error: 'User tidak ditemukan' },
+        { status: 404 }
       );
     }
 
-    // Remove password from response
-    const { password, ...userWithoutPassword } = userData;
+    const { password, saldo, ...rest } = userData;
+    const userWithoutPassword = {
+      ...rest,
+      saldo: Number(saldo ?? 0),
+      profile_completed: userData.profile_completed,
+    };
 
     return NextResponse.json({
       user: userWithoutPassword

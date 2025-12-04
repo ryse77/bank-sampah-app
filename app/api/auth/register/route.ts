@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,40 +33,35 @@ export async function POST(request: NextRequest) {
     const qrData = `BANKSAMPAH-${email}-${Date.now()}`;
     const qrCodeImage = await QRCode.toDataURL(qrData);
 
-    // Insert user ke database
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .insert([{
+    const user = await prisma.user.create({
+      data: {
         nama_lengkap,
         email,
         password: hashedPassword,
-        no_hp,
-        kelurahan,
-        kecamatan,
-        kabupaten,
-        detail_alamat,
+        no_hp: no_hp || null,
+        kelurahan: kelurahan || null,
+        kecamatan: kecamatan || null,
+        kabupaten: kabupaten || null,
+        detail_alamat: detail_alamat || null,
         qr_code: qrCodeImage,  // QR image for display
         qr_data: qrData,        // QR data string for scanning
-        role: 'pengguna'
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+        role: 'pengguna',
+        saldo: 0,
+      },
+      select: { id: true },
+    });
 
     return NextResponse.json({
       message: 'Registrasi berhasil',
-      userId: data.id
+      userId: user.id,
+      profile_completed: false
     }, { status: 201 });
 
   } catch (error) {
     console.error('Register error:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json({ error: 'Email sudah terdaftar' }, { status: 400 });
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -2,14 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
+import dynamic from 'next/dynamic';
 
-export default function LoginPage() {
+function LoginPageComponent() {
   const { user, _hasHydrated, setAuth } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-redirect jika sudah login
   useEffect(() => {
@@ -42,10 +48,17 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      const raw = await response.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        // Server mungkin mengembalikan HTML/error page, tangani secara graceful
+        console.error('Non-JSON response from /api/auth/login:', raw);
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login gagal');
+        throw new Error(data?.error || 'Login gagal');
       }
 
       // Simpan auth data
@@ -61,6 +74,11 @@ export default function LoginPage() {
       setLoading(false); // Set false hanya jika error
     }
   };
+
+  // Tunda render sampai client mounted untuk mencegah mismatch SSR/CSR
+  if (!mounted) {
+    return null;
+  }
 
   // Show loading saat checking auth
   if (!_hasHydrated || isChecking) {
@@ -142,3 +160,8 @@ export default function LoginPage() {
     </div>
   );
 }
+
+// Non-SSR to avoid hydration mismatch from persisted store
+export default dynamic(() => Promise.resolve(LoginPageComponent), {
+  ssr: false,
+});

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const user = requireAuth(request);
@@ -16,23 +16,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('setoran_sampah')
-      .insert([{
+    const data = await prisma.setoranSampah.create({
+      data: {
         user_id: user.id,
         jenis_sampah,
         metode,
         status: 'pending'
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+      }
+    });
 
     return NextResponse.json({
       message: 'Setoran berhasil dibuat',

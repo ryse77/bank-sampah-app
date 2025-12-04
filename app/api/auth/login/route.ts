@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { generateToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,14 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Cari user berdasarkan email
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
-    if (error || !user) {
-      console.error('User not found:', error);
+    if (!user) {
+      console.error('User not found');
       return NextResponse.json(
         { error: 'Email atau password salah' },
         { status: 401 }
@@ -55,8 +53,9 @@ export async function POST(request: NextRequest) {
         nama_lengkap: user.nama_lengkap,
         email: user.email,
         role: user.role,
-        saldo: user.saldo,
-        qr_code: user.qr_code
+        saldo: Number(user.saldo ?? 0),
+        qr_code: user.qr_code,
+        profile_completed: user.profile_completed
       }
     });
 

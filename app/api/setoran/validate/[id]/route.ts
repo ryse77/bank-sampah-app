@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(
   request: NextRequest,
@@ -27,30 +28,22 @@ export async function POST(
       );
     }
 
-    const total_harga = parseFloat(berat_sampah) * parseFloat(harga_per_kg);
+    const berat = parseFloat(berat_sampah);
+    const hargaKg = parseFloat(harga_per_kg);
+    const total_harga = berat * hargaKg;
 
-    // Update setoran
-    const { data: setoran, error: setoranError } = await supabaseAdmin
-      .from('setoran_sampah')
-      .update({
-        berat_sampah: parseFloat(berat_sampah),
-        harga_per_kg: parseFloat(harga_per_kg),
+    const setoran = await prisma.setoranSampah.update({
+      where: { id },
+      data: {
+        berat_sampah: berat,
+        harga_per_kg: hargaKg,
         total_harga,
         status: 'validated',
         pengelola_id: user.id,
         tanggal_validasi: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select('user_id')
-      .single();
-
-    if (setoranError) {
-      console.error('Setoran update error:', setoranError);
-      return NextResponse.json(
-        { error: setoranError.message },
-        { status: 400 }
-      );
-    }
+      },
+      select: { user_id: true }
+    });
 
     if (!setoran || !setoran.user_id) {
       return NextResponse.json(
@@ -59,35 +52,25 @@ export async function POST(
       );
     }
 
-    // Update saldo user - langsung manual update untuk reliability
-    const { data: userData, error: getUserError } = await supabaseAdmin
-      .from('users')
-      .select('saldo')
-      .eq('id', setoran.user_id)
-      .single();
+    const userData = await prisma.user.findUnique({
+      where: { id: setoran.user_id },
+      select: { saldo: true }
+    });
 
-    if (getUserError) {
-      console.error('Get user error:', getUserError);
+    if (!userData) {
+      console.error('Get user error: user not found');
       return NextResponse.json(
         { error: 'User tidak ditemukan' },
         { status: 400 }
       );
     }
 
-    const newSaldo = parseFloat(userData.saldo || '0') + total_harga;
+    const newSaldo = Number(userData.saldo ?? 0) + total_harga;
 
-    const { error: updateSaldoError } = await supabaseAdmin
-      .from('users')
-      .update({ saldo: newSaldo })
-      .eq('id', setoran.user_id);
-
-    if (updateSaldoError) {
-      console.error('Update saldo error:', updateSaldoError);
-      return NextResponse.json(
-        { error: 'Gagal update saldo' },
-        { status: 400 }
-      );
-    }
+    await prisma.user.update({
+      where: { id: setoran.user_id },
+      data: { saldo: newSaldo }
+    });
 
     return NextResponse.json({
       message: 'Setoran berhasil divalidasi',
@@ -96,6 +79,12 @@ export async function POST(
 
   } catch (error) {
     console.error('Validate setoran error:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return NextResponse.json(
+        { error: 'Setoran tidak ditemukan' },
+        { status: 404 }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

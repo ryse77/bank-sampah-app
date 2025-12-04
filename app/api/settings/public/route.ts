@@ -1,22 +1,13 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 // GET - Get public settings (no authentication required)
 export async function GET() {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('app_settings')
-      .select('*')
-      .in('setting_key', ['app_download_link']) // Only expose public settings
-      .order('setting_key', { ascending: true });
-
-    if (error) {
-      console.error('Get public settings error:', error);
-      return NextResponse.json(
-        { error: 'Gagal mengambil settings' },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.appSetting.findMany({
+      where: { setting_key: { in: ['app_download_link'] } },
+      orderBy: { setting_key: 'asc' },
+    });
 
     // Convert array to object for easier access
     const settings: Record<string, any> = {};

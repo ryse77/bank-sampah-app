@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const user = requireRole(request, ['admin', 'pengelola']);
@@ -16,20 +16,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cari user berdasarkan 3 digit terakhir dari ID
-    const { data: users, error } = await supabaseAdmin
-      .from('users')
-      .select('id, nama_lengkap, email, saldo')
-      .eq('role', 'pengguna');
+    const normalizedCode = code.toLowerCase();
 
-    if (error) {
-      throw error;
-    }
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'pengguna',
+        id: {
+          endsWith: normalizedCode
+        }
+      },
+      select: {
+        id: true,
+        nama_lengkap: true,
+        email: true,
+        saldo: true
+      }
+    });
 
-    // Filter user yang ID-nya berakhiran dengan code yang dicari
-    const foundUser = users?.find(u =>
-      u.id.slice(-3).toUpperCase() === code.toUpperCase()
-    );
+    const foundUser = users?.[0];
 
     if (!foundUser) {
       return NextResponse.json(
@@ -42,7 +46,7 @@ export async function POST(request: NextRequest) {
       id: foundUser.id,
       nama_lengkap: foundUser.nama_lengkap,
       email: foundUser.email,
-      saldo: foundUser.saldo
+      saldo: Number(foundUser.saldo ?? 0)
     });
 
   } catch (error) {

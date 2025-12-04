@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import { requireRole } from '@/lib/auth';
+import { Prisma } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,11 +51,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Cek apakah email sudah ada
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true }
+    });
 
     if (existingUser) {
       return NextResponse.json(
@@ -71,46 +71,42 @@ export async function POST(request: NextRequest) {
     const qrCodeImage = await QRCode.toDataURL(qrData);
 
     // Buat user baru
-    const { data: newUser, error: createError } = await supabaseAdmin
-      .from('users')
-      .insert([
-        {
-          nama_lengkap,
-          email,
-          password: hashedPassword,
-          no_hp: no_hp || null,
-          kelurahan: kelurahan || null,
-          kecamatan: kecamatan || null,
-          kabupaten: kabupaten || null,
-          detail_alamat: detail_alamat || null,
-          qr_code: qrCodeImage,  // QR image for display
-          qr_data: qrData,        // QR data string for scanning
-          role,
-          saldo: 0,
-        },
-      ])
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('Create user error:', createError);
-      return NextResponse.json(
-        { error: 'Gagal membuat akun' },
-        { status: 500 }
-      );
-    }
+    const newUser = await prisma.user.create({
+      data: {
+        nama_lengkap,
+        email,
+        password: hashedPassword,
+        no_hp: no_hp || null,
+        kelurahan: kelurahan || null,
+        kecamatan: kecamatan || null,
+        kabupaten: kabupaten || null,
+        detail_alamat: detail_alamat || null,
+        qr_code: qrCodeImage,  // QR image for display
+        qr_data: qrData,        // QR data string for scanning
+        role,
+        saldo: 0,
+        profile_completed: false,
+      },
+      select: {
+        id: true,
+        nama_lengkap: true,
+        email: true,
+        role: true
+      }
+    });
 
     return NextResponse.json({
       message: 'Akun berhasil dibuat',
-      user: {
-        id: newUser.id,
-        nama_lengkap: newUser.nama_lengkap,
-        email: newUser.email,
-        role: newUser.role,
-      },
+      user: newUser,
     });
   } catch (error) {
     console.error('Create user error:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return NextResponse.json(
+        { error: 'Email sudah terdaftar' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

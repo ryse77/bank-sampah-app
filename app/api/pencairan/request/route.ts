@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const user = requireAuth(request);
@@ -17,20 +17,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check saldo user
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('saldo')
-      .eq('id', user.id)
-      .single();
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { saldo: true }
+    });
 
-    if (userError || !userData) {
+    if (!userData) {
       return NextResponse.json(
         { error: 'User tidak ditemukan' },
         { status: 404 }
       );
     }
 
-    if (parseFloat(userData.saldo) < nominal) {
+    if (Number(userData.saldo ?? 0) < nominal) {
       return NextResponse.json(
         { error: 'Saldo tidak mencukupi' },
         { status: 400 }
@@ -38,26 +37,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Create pencairan request
-    const { data, error } = await supabaseAdmin
-      .from('pencairan_saldo')
-      .insert([{
+    const data = await prisma.pencairanSaldo.create({
+      data: {
         user_id: user.id,
         nominal,
         status: 'pending'
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+      }
+    });
 
     return NextResponse.json({
       message: 'Permintaan pencairan berhasil dibuat',
-      data
+      data: {
+        ...data,
+        nominal: Number(data.nominal)
+      }
     }, { status: 201 });
 
   } catch (error) {

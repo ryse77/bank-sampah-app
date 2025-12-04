@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   const user = requireRole(request, ['admin']);
@@ -24,23 +24,14 @@ export async function POST(request: NextRequest) {
       gambarData = JSON.stringify(gambar);
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('artikel')
-      .insert([{
+    const data = await prisma.artikel.create({
+      data: {
         judul,
         konten,
-        gambar: gambarData,
+        gambar: gambarData ?? null,
         admin_id: user.id
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+      }
+    });
 
     return NextResponse.json({
       message: 'Artikel berhasil dibuat',

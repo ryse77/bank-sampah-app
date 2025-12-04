@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
@@ -15,36 +15,48 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const search = searchParams.get('search');
 
-    let query = supabaseAdmin
-      .from('users')
-      .select('id, nama_lengkap, email, no_hp, kelurahan, kecamatan, kabupaten, detail_alamat, role, saldo, created_at')
-      .order('created_at', { ascending: false });
+    const where: any = {};
 
-    // IMPORTANT: Pengelola hanya bisa melihat member dengan role 'pengguna' saja
     if (user.role === 'pengelola') {
-      query = query.eq('role', 'pengguna');
+      where.role = 'pengguna';
     } else if (user.role === 'admin') {
-      // Admin bisa melihat semua, tapi bisa filter by role
       if (role && role !== 'all') {
-        query = query.eq('role', role);
+        where.role = role;
       }
     }
 
-    // Search by name or email
     if (search) {
-      query = query.or(`nama_lengkap.ilike.%${search}%,email.ilike.%${search}%`);
+      where.OR = [
+        { nama_lengkap: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
-    const { data, error } = await query;
+    const data = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        nama_lengkap: true,
+        email: true,
+        no_hp: true,
+        kelurahan: true,
+        kecamatan: true,
+        kabupaten: true,
+        detail_alamat: true,
+        role: true,
+        saldo: true,
+        profile_completed: true,
+        created_at: true
+      },
+      orderBy: { created_at: 'desc' }
+    });
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+    const formatted = data.map((item) => ({
+      ...item,
+      saldo: Number(item.saldo ?? 0)
+    }));
 
-    return NextResponse.json(data, {
+    return NextResponse.json(formatted, {
       headers: {
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',

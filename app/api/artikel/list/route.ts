@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,28 +7,27 @@ export async function GET(request: NextRequest) {
     const limit = searchParams.get('limit') || '10';
     const offset = searchParams.get('offset') || '0';
 
-    const { data, error, count } = await supabaseAdmin
-      .from('artikel')
-      .select(`
-        *,
-        admin:admin_id (nama_lengkap)
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
+    const take = parseInt(limit);
+    const skip = parseInt(offset);
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
+    const [data, count] = await Promise.all([
+      prisma.artikel.findMany({
+        include: {
+          admin: { select: { nama_lengkap: true } }
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take
+      }),
+      prisma.artikel.count()
+    ]);
 
     return NextResponse.json({
       data,
       pagination: {
         total: count,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        limit: take,
+        offset: skip
       }
     });
 

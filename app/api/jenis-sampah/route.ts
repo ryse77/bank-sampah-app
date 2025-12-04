@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
 import { requireRole } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 // GET - Get all jenis sampah
 export async function GET(request: NextRequest) {
@@ -12,25 +12,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
 
-    let query = supabaseAdmin
-      .from('jenis_sampah')
-      .select('*')
-      .order('nama', { ascending: true });
-
-    // Filter only active items if requested
-    if (activeOnly) {
-      query = query.eq('is_active', true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Get jenis sampah error:', error);
-      return NextResponse.json(
-        { error: 'Gagal mengambil data jenis sampah' },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.jenisSampah.findMany({
+      where: activeOnly ? { is_active: true } : undefined,
+      orderBy: { nama: 'asc' }
+    });
 
     return NextResponse.json({ data });
 
@@ -60,11 +45,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if jenis sampah with same name already exists
-    const { data: existing } = await supabaseAdmin
-      .from('jenis_sampah')
-      .select('id')
-      .eq('nama', nama)
-      .maybeSingle();
+    const existing = await prisma.jenisSampah.findUnique({
+      where: { nama }
+    });
 
     if (existing) {
       return NextResponse.json(
@@ -73,22 +56,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('jenis_sampah')
-      .insert({
+    const data = await prisma.jenisSampah.create({
+      data: {
         nama,
         is_active: is_active !== undefined ? is_active : true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Create jenis sampah error:', error);
-      return NextResponse.json(
-        { error: `Gagal menambah jenis sampah: ${error.message}` },
-        { status: 500 }
-      );
-    }
+      }
+    });
 
     return NextResponse.json({
       message: 'Jenis sampah berhasil ditambahkan',
@@ -121,11 +94,10 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get current data first
-    const { data: currentData } = await supabaseAdmin
-      .from('jenis_sampah')
-      .select('nama')
-      .eq('id', id)
-      .single();
+    const currentData = await prisma.jenisSampah.findUnique({
+      where: { id },
+      select: { nama: true }
+    });
 
     if (!currentData) {
       return NextResponse.json(
@@ -136,12 +108,13 @@ export async function PUT(request: NextRequest) {
 
     // Check if updating to a name that already exists (excluding current item)
     if (nama && nama !== currentData.nama) {
-      const { data: existing } = await supabaseAdmin
-        .from('jenis_sampah')
-        .select('id')
-        .eq('nama', nama)
-        .neq('id', id)
-        .maybeSingle();
+      const existing = await prisma.jenisSampah.findFirst({
+        where: {
+          nama,
+          NOT: { id }
+        },
+        select: { id: true }
+      });
 
       if (existing) {
         return NextResponse.json(
@@ -151,35 +124,20 @@ export async function PUT(request: NextRequest) {
       }
 
       // Update all setoran_sampah records that use the old name
-      const { error: updateSetoranError } = await supabaseAdmin
-        .from('setoran_sampah')
-        .update({ jenis_sampah: nama })
-        .eq('jenis_sampah', currentData.nama);
-
-      if (updateSetoranError) {
-        console.error('Update setoran jenis_sampah error:', updateSetoranError);
-        // Continue anyway, this is not critical
-      }
+      await prisma.setoranSampah.updateMany({
+        where: { jenis_sampah: currentData.nama },
+        data: { jenis_sampah: nama }
+      });
     }
 
     const updateData: any = {};
     if (nama !== undefined) updateData.nama = nama;
     if (is_active !== undefined) updateData.is_active = is_active;
 
-    const { data, error } = await supabaseAdmin
-      .from('jenis_sampah')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Update jenis sampah error:', error);
-      return NextResponse.json(
-        { error: `Gagal update jenis sampah: ${error.message}` },
-        { status: 500 }
-      );
-    }
+    const data = await prisma.jenisSampah.update({
+      where: { id },
+      data: updateData,
+    });
 
     return NextResponse.json({
       message: 'Jenis sampah berhasil diupdate',
@@ -212,11 +170,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get jenis sampah name first
-    const { data: jenisSampahData } = await supabaseAdmin
-      .from('jenis_sampah')
-      .select('nama')
-      .eq('id', id)
-      .single();
+    const jenisSampahData = await prisma.jenisSampah.findUnique({
+      where: { id },
+      select: { nama: true }
+    });
 
     if (!jenisSampahData) {
       return NextResponse.json(
@@ -227,13 +184,12 @@ export async function DELETE(request: NextRequest) {
 
     // Check if this jenis_sampah is used in any setoran_sampah
     // The jenis_sampah column in setoran_sampah stores the name, not the ID
-    const { data: setoranCheck } = await supabaseAdmin
-      .from('setoran_sampah')
-      .select('id')
-      .eq('jenis_sampah', jenisSampahData.nama)
-      .limit(1);
+    const setoranCheck = await prisma.setoranSampah.findFirst({
+      where: { jenis_sampah: jenisSampahData.nama },
+      select: { id: true }
+    });
 
-    if (setoranCheck && setoranCheck.length > 0) {
+    if (setoranCheck) {
       return NextResponse.json(
         { error: 'Tidak dapat menghapus jenis sampah yang sudah digunakan dalam transaksi. Nonaktifkan saja.' },
         { status: 400 }
@@ -241,18 +197,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete the jenis_sampah
-    const { error } = await supabaseAdmin
-      .from('jenis_sampah')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Delete jenis sampah error:', error);
-      return NextResponse.json(
-        { error: `Gagal menghapus jenis sampah: ${error.message}` },
-        { status: 500 }
-      );
-    }
+    await prisma.jenisSampah.delete({
+      where: { id }
+    });
 
     return NextResponse.json({
       message: 'Jenis sampah berhasil dihapus'

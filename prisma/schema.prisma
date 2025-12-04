@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String           @id @default(uuid()) @db.Uuid
+  nama_lengkap   String
+  email          String           @unique
+  password       String
+  no_hp          String?
+  kelurahan      String?
+  kecamatan      String?
+  kabupaten      String?
+  detail_alamat  String?
+  role           String           @default("pengguna")
+  qr_code        String?
+  qr_data        String?
+  saldo          Decimal          @db.Decimal(18, 2) @default(0)
+  profile_completed Boolean       @default(false)
+  created_at     DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime         @updatedAt @db.Timestamptz(6)
+  setoran        SetoranSampah[]  @relation("SetoranUser")
+  setoranByPengelola SetoranSampah[] @relation("SetoranPengelola")
+  pencairan      PencairanSaldo[] @relation("PencairanUser")
+  pencairanByPengelola PencairanSaldo[] @relation("PencairanPengelola")
+  artikel        Artikel[]
+
+  @@map("users")
+  @@index([qr_data])
+  @@index([role])
+}
+
+model SetoranSampah {
+  id               String          @id @default(uuid()) @db.Uuid
+  user_id          String          @db.Uuid
+  user             User            @relation("SetoranUser", fields: [user_id], references: [id], onDelete: Cascade)
+  jenis_sampah     String
+  berat_sampah     Decimal?        @db.Decimal(18, 2)
+  harga_per_kg     Decimal?        @db.Decimal(18, 2)
+  total_harga      Decimal?        @db.Decimal(18, 2)
+  metode           String
+  status           String          @default("pending")
+  pengelola_id     String?         @db.Uuid
+  pengelola        User?           @relation("SetoranPengelola", fields: [pengelola_id], references: [id])
+  tanggal_setor    DateTime        @default(now()) @db.Timestamptz(6)
+  tanggal_validasi DateTime?       @db.Timestamptz(6)
+
+  @@map("setoran_sampah")
+  @@index([user_id])
+  @@index([pengelola_id])
+  @@index([jenis_sampah])
+  @@index([status])
+}
+
+model PencairanSaldo {
+  id                String           @id @default(uuid()) @db.Uuid
+  user_id           String           @db.Uuid
+  user              User             @relation("PencairanUser", fields: [user_id], references: [id], onDelete: Cascade)
+  nominal           Decimal          @db.Decimal(18, 2)
+  status            String           @default("pending")
+  pengelola_id      String?          @db.Uuid
+  pengelola         User?            @relation("PencairanPengelola", fields: [pengelola_id], references: [id])
+  tanggal_request   DateTime         @default(now()) @db.Timestamptz(6)
+  tanggal_pencairan DateTime?        @db.Timestamptz(6)
+  catatan           String?
+
+  @@map("pencairan_saldo")
+  @@index([user_id])
+  @@index([pengelola_id])
+  @@index([status])
+}
+
+model Artikel {
+  id         String   @id @default(uuid()) @db.Uuid
+  judul      String
+  konten     String
+  gambar     String?
+  admin_id   String   @db.Uuid
+  admin      User     @relation(fields: [admin_id], references: [id])
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("artikel")
+  @@index([admin_id])
+}
+
+model AppSetting {
+  id           String   @id @default(uuid()) @db.Uuid
+  setting_key  String   @unique
+  setting_value String
+  description  String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("app_settings")
+}
+
+model JenisSampah {
+  id         String   @id @default(uuid()) @db.Uuid
+  nama       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @updatedAt @db.Timestamptz(6)
+
+  @@map("jenis_sampah")
+  @@index([is_active])
+}

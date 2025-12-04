@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { memberService } from '@/lib/api';
 import { User } from '@/lib/types';
-import { Users, Search, MessageCircle, UserPlus, Trash2, Eye, X } from 'lucide-react';
+import { Users, Search, MessageCircle, UserPlus, Trash2, Eye, X, Upload, Download, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/authStore';
 import { clearAllCache } from '@/lib/cache-utils';
@@ -17,6 +17,9 @@ export default function MemberPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [emailError, setEmailError] = useState('');
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -64,6 +67,101 @@ export default function MemberPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     loadMembers();
+  };
+
+  const handleImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      alert('Pilih file terlebih dahulu');
+      return;
+    }
+
+    const { token } = useAuthStore.getState();
+    if (!token) {
+      alert('Token tidak ditemukan. Silakan login ulang.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', importFile);
+
+    try {
+      setImporting(true);
+      const res = await fetch('/api/member/import', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Gagal import');
+      }
+      alert(`Import selesai. Sukses: ${data.success}, Gagal: ${data.failed}`);
+      if (data.errors?.length) {
+        console.warn('Import errors:', data.errors);
+      }
+      setShowImportModal(false);
+      setImportFile(null);
+      handleManualRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Gagal import');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleExport = async () => {
+    const { token } = useAuthStore.getState();
+    if (!token) {
+      alert('Token tidak ditemukan. Silakan login ulang.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/member/export', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Gagal export');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `member-${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Gagal export');
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    const { token } = useAuthStore.getState();
+    if (!token) {
+      alert('Token tidak ditemukan. Silakan login ulang.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/member/import/template', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Gagal download template');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'template-import-member.xlsx';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Gagal download template');
+    }
   };
 
   const handleWhatsApp = (noHp: string | undefined, nama: string) => {
@@ -216,51 +314,74 @@ export default function MemberPage() {
     );
   }
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-            <Users className="w-6 h-6 text-indigo-600" />
+    return (
+      <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Users className="w-6 h-6 text-indigo-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Daftar Member</h1>
+              <p className="text-gray-600">Kelola data member bank sampah</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Daftar Member</h1>
-            <p className="text-gray-600">Kelola data member bank sampah</p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
-            title="Refresh data"
-          >
-            <svg
-              className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-
-          {isAdmin && (
+          <div className="flex flex-col sm:flex-row sm:flex-wrap md:justify-end gap-2">
             <button
-              onClick={() => {
-                setShowCreateModal(true);
-                setEmailError('');
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
+              title="Refresh data"
             >
-              <UserPlus className="w-5 h-5" />
-              Tambah Akun
+              <svg
+                className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
             </button>
-          )}
+
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Upload className="w-5 h-5" />
+                  Import
+                </button>
+                <button
+                  onClick={handleExport}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Download className="w-5 h-5" />
+                  Export
+                </button>
+                <button
+                  onClick={handleDownloadTemplate}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  <FileText className="w-5 h-5" />
+                  Template
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreateModal(true);
+                    setEmailError('');
+                  }}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Tambah Akun
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 mb-6">
@@ -333,6 +454,9 @@ export default function MemberPage() {
                   Saldo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  Profil
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Role
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -375,6 +499,11 @@ export default function MemberPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                       Rp {parseFloat(member.saldo.toString()).toLocaleString('id-ID')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${member.profile_completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {member.profile_completed ? 'Lengkap' : 'Belum'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800 capitalize">
@@ -726,6 +855,53 @@ export default function MemberPage() {
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {checkingEmail ? 'Mengecek email...' : 'Buat Akun'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Import */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 my-8 mx-4">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Import Member</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              File XLSX/CSV dengan kolom: nama_lengkap, email, password, no_hp, saldo_default.
+            </p>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="flex items-center gap-2 px-3 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors mb-4"
+            >
+              <FileText className="w-4 h-4" />
+              Download Template
+            </button>
+            <form onSubmit={handleImport} className="space-y-4">
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="w-full"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportFile(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={importing}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {importing ? 'Mengimpor...' : 'Import'}
                 </button>
               </div>
             </form>
