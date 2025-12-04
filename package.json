@@ -9,7 +9,9 @@
     "lint": "eslint",
     "generate-icons": "node scripts/generate-icons.js",
     "prisma:generate": "prisma generate",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "vercel-build": "prisma generate && next build",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.21.1",
