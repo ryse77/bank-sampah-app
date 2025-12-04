@@ -21,7 +21,7 @@
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.553.0",
-    "next": "16.0.1",
+    "next": "^16.0.7",
     "prisma": "^5.21.1",
     "qrcode": "^1.5.4",
     "react": "19.2.0",
@@ -40,8 +40,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "baseline-browser-mapping": "^2.9.2",
     "eslint": "^9",
-    "eslint-config-next": "16.0.1",
+    "eslint-config-next": "^16.0.7",
     "tailwindcss": "^4",
     "typescript": "5.9.3"
   }
