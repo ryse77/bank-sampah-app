@@ -3,6 +3,9 @@ import { requireRole } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
   const user = requireRole(request, ['admin', 'pengelola']);
   if (user instanceof Response) return user;

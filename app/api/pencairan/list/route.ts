@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// ensure no static caching
+
 export async function GET(request: NextRequest) {
   const user = requireAuth(request);
   if (user instanceof Response) return user;
