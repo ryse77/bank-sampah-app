@@ -134,7 +134,7 @@ export async function generateImageSizes(file: File): Promise<{
 }
 
 /**
- * Upload gambar ke Supabase Storage
+ * Upload gambar ke storage server
  */
 export async function uploadImagesToStorage(
   files: { desktop: File; tablet: File; mobile: File },

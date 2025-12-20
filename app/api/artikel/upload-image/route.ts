@@ -1,18 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { mkdir, unlink, writeFile } from 'fs/promises';
+import path from 'path';
 import { requireRole } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * API untuk upload gambar artikel ke Supabase Storage
+ * API untuk upload gambar artikel ke storage lokal (public/)
  * Menerima 3 file: desktop, tablet, mobile
  * Return URLs untuk setiap ukuran
  */
 export async function POST(request: NextRequest) {
   const user = requireRole(request, ['admin']);
   if (user instanceof Response) return user;
+
+  const writtenPaths: string[] = [];
 
   try {
     const formData = await request.formData();
@@ -45,81 +48,34 @@ export async function POST(request: NextRequest) {
     const randomString = Math.random().toString(36).substring(7);
     const baseFilename = `artikel-${timestamp}-${randomString}`;
 
-    const bucketName = 'artikel-images';
+    const uploadRoot = path.join(process.cwd(), 'public', 'uploads', 'artikel');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '');
 
-    // Upload desktop version
-    const desktopBuffer = await desktopFile.arrayBuffer();
-    const desktopPath = `desktop/${baseFilename}.jpg`;
-    const { data: desktopData, error: desktopError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(desktopPath, desktopBuffer, {
-        contentType: 'image/jpeg',
-        cacheControl: '31536000', // 1 year
-        upsert: false,
-      });
+    const extensionByType: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
 
-    if (desktopError) {
-      console.error('Desktop upload error:', desktopError);
-      return NextResponse.json(
-        { error: `Gagal upload gambar desktop: ${desktopError.message}` },
-        { status: 500 }
-      );
-    }
+    const saveFile = async (file: File, sizeFolder: string) => {
+      const extension = extensionByType[file.type] || 'jpg';
+      const filename = `${baseFilename}.${extension}`;
+      const targetDir = path.join(uploadRoot, sizeFolder);
+      await mkdir(targetDir, { recursive: true });
 
-    // Upload tablet version
-    const tabletBuffer = await tabletFile.arrayBuffer();
-    const tabletPath = `tablet/${baseFilename}.jpg`;
-    const { data: tabletData, error: tabletError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(tabletPath, tabletBuffer, {
-        contentType: 'image/jpeg',
-        cacheControl: '31536000',
-        upsert: false,
-      });
+      const filePath = path.join(targetDir, filename);
+      const buffer = Buffer.from(await file.arrayBuffer());
+      await writeFile(filePath, buffer);
+      writtenPaths.push(filePath);
 
-    if (tabletError) {
-      console.error('Tablet upload error:', tabletError);
-      // Cleanup desktop file
-      await supabaseAdmin.storage.from(bucketName).remove([desktopPath]);
-      return NextResponse.json(
-        { error: `Gagal upload gambar tablet: ${tabletError.message}` },
-        { status: 500 }
-      );
-    }
+      const publicPath = `/uploads/artikel/${sizeFolder}/${filename}`;
+      return appUrl ? `${appUrl}${publicPath}` : publicPath;
+    };
 
-    // Upload mobile version
-    const mobileBuffer = await mobileFile.arrayBuffer();
-    const mobilePath = `mobile/${baseFilename}.jpg`;
-    const { data: mobileData, error: mobileError } = await supabaseAdmin.storage
-      .from(bucketName)
-      .upload(mobilePath, mobileBuffer, {
-        contentType: 'image/jpeg',
-        cacheControl: '31536000',
-        upsert: false,
-      });
-
-    if (mobileError) {
-      console.error('Mobile upload error:', mobileError);
-      // Cleanup previous files
-      await supabaseAdmin.storage.from(bucketName).remove([desktopPath, tabletPath]);
-      return NextResponse.json(
-        { error: `Gagal upload gambar mobile: ${mobileError.message}` },
-        { status: 500 }
-      );
-    }
-
-    // Get public URLs
-    const { data: { publicUrl: desktopUrl } } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(desktopPath);
-
-    const { data: { publicUrl: tabletUrl } } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(tabletPath);
-
-    const { data: { publicUrl: mobileUrl } } = supabaseAdmin.storage
-      .from(bucketName)
-      .getPublicUrl(mobilePath);
+    const desktopUrl = await saveFile(desktopFile, 'desktop');
+    const tabletUrl = await saveFile(tabletFile, 'tablet');
+    const mobileUrl = await saveFile(mobileFile, 'mobile');
 
     return NextResponse.json({
       message: 'Gambar berhasil diupload',
@@ -130,7 +86,17 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Upload image error:', error);
+    // Best-effort cleanup if write failed mid-way
+    if (error instanceof Error) {
+      console.error('Upload image error:', error);
+    }
+    for (const filePath of writtenPaths) {
+      try {
+        await unlink(filePath);
+      } catch {
+        // ignore cleanup errors
+      }
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
