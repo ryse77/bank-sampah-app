@@ -75,8 +75,10 @@ export const useAuthStore = create<AuthState>()(
       version: 2,
       onRehydrateStorage: () => {
         return (state, error) => {
-          if (!error) {
-            state?.setHasHydrated(true);
+          // Always mark hydration as finished to prevent infinite loading screen
+          state?.setHasHydrated(true);
+          if (error && typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+            console.error('Auth store hydration error:', error);
           }
         };
       },

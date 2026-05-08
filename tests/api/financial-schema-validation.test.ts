@@ -29,7 +29,7 @@ describe('Financial schema validation', () => {
 
     const req = new Request('http://localhost/api/setoran/validate/s1', {
       method: 'POST',
-      body: JSON.stringify({ berat_sampah: -1, harga_per_kg: 1000 }),
+      body: JSON.stringify({ berat_sampah: -1 }),
       headers: { 'content-type': 'application/json' }
     });
 

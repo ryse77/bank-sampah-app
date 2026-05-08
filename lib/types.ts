@@ -23,7 +23,7 @@ export interface Setoran {
   berat_sampah?: number;
   harga_per_kg?: number;
   total_harga?: number;
-  metode: 'pick-up' | 'drop-off';
+  metode: 'pick-up' | 'drop-off' | 'antar-langsung';
   status: 'pending' | 'validated' | 'rejected';
   pengelola_id?: string;
   tanggal_setor: string;
@@ -70,6 +70,7 @@ export interface Artikel {
 export interface JenisSampah {
   id: string;
   nama: string;
+  harga_per_kg: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;

@@ -18,21 +18,17 @@ export async function POST(
     if (!parsed.success) {
       return apiError(parsed.error, 400);
     }
-    const { berat_sampah, harga_per_kg } = parsed.data;
+    const { berat_sampah } = parsed.data;
 
     if (!id) {
       return apiError('ID setoran tidak valid', 400);
     }
 
     const berat = berat_sampah;
-    const hargaKg = harga_per_kg;
-
-    const total_harga = berat * hargaKg;
-
     const setoranResult = await prisma.$transaction(async (tx) => {
       const existing = await tx.setoranSampah.findUnique({
         where: { id },
-        select: { id: true, user_id: true, status: true }
+        select: { id: true, user_id: true, status: true, jenis_sampah: true }
       });
 
       if (!existing) {
@@ -42,6 +38,17 @@ export async function POST(
       if (existing.status !== 'pending') {
         throw new Error('SETORAN_ALREADY_PROCESSED');
       }
+
+      const jenisSampah = await tx.jenisSampah.findFirst({
+        where: { nama: existing.jenis_sampah },
+        select: { harga_per_kg: true }
+      });
+      if (!jenisSampah) {
+        throw new Error('JENIS_SAMPAH_NOT_FOUND');
+      }
+
+      const hargaKg = Number(jenisSampah.harga_per_kg);
+      const total_harga = berat * hargaKg;
 
       const updateResult = await tx.setoranSampah.updateMany({
         where: { id, status: 'pending' },
@@ -64,12 +71,12 @@ export async function POST(
         data: { saldo: { increment: total_harga } }
       });
 
-      return existing;
+      return { user_id: existing.user_id, total_harga };
     });
 
     return apiSuccess({
       message: 'Setoran berhasil divalidasi',
-      total_harga,
+      total_harga: setoranResult.total_harga,
       user_id: setoranResult.user_id
     });
 
@@ -80,6 +87,9 @@ export async function POST(
     }
     if (error instanceof Error && error.message === 'SETORAN_ALREADY_PROCESSED') {
       return apiError('Setoran sudah diproses sebelumnya', 409);
+    }
+    if (error instanceof Error && error.message === 'JENIS_SAMPAH_NOT_FOUND') {
+      return apiError('Jenis sampah tidak ditemukan', 400);
     }
     return apiError('Internal server error', 500);
   }

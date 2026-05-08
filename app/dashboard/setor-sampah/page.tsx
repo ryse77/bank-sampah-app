@@ -44,9 +44,9 @@ export default function SetorSampahPage() {
         console.error('Failed to fetch jenis sampah:', error);
         // Fallback to default options if fetch fails
         setJenisSampahOptions([
-          { id: '1', nama: 'Plastik', is_active: true, created_at: '', updated_at: '' },
-          { id: '2', nama: 'Kertas', is_active: true, created_at: '', updated_at: '' },
-          { id: '3', nama: 'Kardus', is_active: true, created_at: '', updated_at: '' },
+          { id: '1', nama: 'Plastik', harga_per_kg: 0, is_active: true, created_at: '', updated_at: '' },
+          { id: '2', nama: 'Kertas', harga_per_kg: 0, is_active: true, created_at: '', updated_at: '' },
+          { id: '3', nama: 'Kardus', harga_per_kg: 0, is_active: true, created_at: '', updated_at: '' },
         ]);
       } finally {
         setLoadingJenisSampah(false);
@@ -159,8 +159,8 @@ export default function SetorSampahPage() {
           {/* Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
-              <strong>Catatan:</strong> Berat sampah dan harga akan ditentukan oleh pengelola
-              setelah melakukan penimbangan dan validasi.
+              <strong>Catatan:</strong> Harga per kg mengikuti master jenis sampah. Berat sampah
+              akan ditentukan oleh pengelola saat penimbangan dan validasi.
             </p>
           </div>
 

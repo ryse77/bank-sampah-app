@@ -27,7 +27,7 @@ describe('/api/jenis-sampah guards', () => {
 
     const req = new Request('http://localhost/api/jenis-sampah', {
       method: 'POST',
-      body: JSON.stringify({ nama: 'Plastik', is_active: true }),
+      body: JSON.stringify({ nama: 'Plastik', harga_per_kg: 2000, is_active: true }),
       headers: { 'content-type': 'application/json' }
     });
 

@@ -26,7 +26,7 @@ describe('POST /api/setoran/validate/[id]', () => {
 
     const req = new Request('http://localhost/api/setoran/validate/abc', {
       method: 'POST',
-      body: JSON.stringify({ berat_sampah: 2, harga_per_kg: 1000 }),
+      body: JSON.stringify({ berat_sampah: 2 }),
       headers: { 'content-type': 'application/json' }
     });
 
@@ -39,11 +39,11 @@ describe('POST /api/setoran/validate/[id]', () => {
 
   it('returns 200 and payload when validated successfully', async () => {
     requireRoleMock.mockReturnValue({ id: 'pengelola-1', role: 'pengelola' } as unknown);
-    transactionMock.mockResolvedValue({ id: 'setoran-1', user_id: 'user-1', status: 'pending' } as unknown);
+    transactionMock.mockResolvedValue({ user_id: 'user-1', total_harga: 6000 } as unknown);
 
     const req = new Request('http://localhost/api/setoran/validate/setoran-1', {
       method: 'POST',
-      body: JSON.stringify({ berat_sampah: 3, harga_per_kg: 2000 }),
+      body: JSON.stringify({ berat_sampah: 3 }),
       headers: { 'content-type': 'application/json' }
     });
 

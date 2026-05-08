@@ -74,7 +74,6 @@ type SetoranCreatePayload = {
 
 type SetoranValidatePayload = {
   berat_sampah: number;
-  harga_per_kg: number;
 };
 
 type SetoranListResponse = Setoran[];

@@ -107,10 +107,12 @@ export default function SettingsPage() {
         ? {
             id: editingJenisSampah.id,
             nama: jenisSampahForm.nama.trim(),
+            harga_per_kg: Number(jenisSampahForm.harga_per_kg),
             is_active: jenisSampahForm.is_active
           }
         : {
             nama: jenisSampahForm.nama.trim(),
+            harga_per_kg: Number(jenisSampahForm.harga_per_kg),
             is_active: jenisSampahForm.is_active
           };
 
@@ -230,7 +232,7 @@ export default function SettingsPage() {
     setEditingJenisSampah(item);
     setJenisSampahForm({
       nama: item.nama,
-      harga_per_kg: '', // Not used in form
+      harga_per_kg: item.harga_per_kg.toString(),
       deskripsi: '', // Not used in form
       is_active: item.is_active
     });
@@ -672,6 +674,21 @@ export default function SettingsPage() {
                             placeholder="Contoh: Plastik PET"
                           />
                         </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Harga per Kg (Rp) *
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="100"
+                            value={jenisSampahForm.harga_per_kg}
+                            onChange={(e) => setJenisSampahForm({ ...jenisSampahForm, harga_per_kg: e.target.value })}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            required
+                            placeholder="Contoh: 2500"
+                          />
+                        </div>
 
                         <div className="flex items-center gap-3">
                           <input
@@ -747,6 +764,9 @@ export default function SettingsPage() {
                           Nama
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Harga/Kg
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -757,7 +777,7 @@ export default function SettingsPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {jenisSampahList.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                          <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                             <Package className="w-12 h-12 mx-auto mb-2 text-gray-400" />
                             <p>Belum ada jenis sampah. Klik &quot;Tambah Baru&quot; untuk menambahkan.</p>
                           </td>
@@ -767,6 +787,11 @@ export default function SettingsPage() {
                           <tr key={item.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="font-medium text-gray-900">{item.nama}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="font-medium text-gray-900">
+                                Rp {Number(item.harga_per_kg).toLocaleString('id-ID')}
+                              </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <button

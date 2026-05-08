@@ -56,12 +56,14 @@ export const jenisSampahListQuerySchema = z.object({
 
 export const jenisSampahCreateSchema = z.object({
   nama: z.string().trim().min(1, 'Nama jenis sampah diperlukan').max(120, 'Nama jenis sampah terlalu panjang'),
+  harga_per_kg: z.coerce.number().min(0, 'Harga per kg tidak boleh negatif'),
   is_active: z.boolean().optional()
 });
 
 export const jenisSampahUpdateSchema = z.object({
   id: z.string().trim().min(1, 'ID diperlukan untuk update'),
   nama: z.string().trim().min(1, 'Nama tidak boleh kosong').max(120, 'Nama jenis sampah terlalu panjang').optional(),
+  harga_per_kg: z.coerce.number().min(0, 'Harga per kg tidak boleh negatif').optional(),
   is_active: z.boolean().optional()
 });
 
@@ -96,8 +98,7 @@ export const pencairanApproveSchema = z.object({
 });
 
 export const setoranValidateSchema = z.object({
-  berat_sampah: z.coerce.number().positive('Berat sampah dan harga per kg harus angka positif'),
-  harga_per_kg: z.coerce.number().positive('Berat sampah dan harga per kg harus angka positif')
+  berat_sampah: z.coerce.number().positive('Berat sampah harus angka positif')
 });
 
 export const memberPasswordUpdateSchema = z.object({

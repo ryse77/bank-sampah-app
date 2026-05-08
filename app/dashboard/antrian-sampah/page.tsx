@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { setoranService } from '@/lib/api';
+import { useAuthStore } from '@/lib/store/authStore';
 import { Setoran } from '@/lib/types';
 import { ListChecks, Package, Truck, MessageCircle, Search } from 'lucide-react';
 
@@ -19,10 +20,11 @@ export default function AntrianSampahPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSetoran, setSelectedSetoran] = useState<Setoran | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [hargaPerKgMap, setHargaPerKgMap] = useState<Record<string, number>>({});
   const [formData, setFormData] = useState({
-    berat_sampah: '',
-    harga_per_kg: ''
+    berat_sampah: ''
   });
+  const { token } = useAuthStore();
 
   const loadAntrian = useCallback(async () => {
     try {
@@ -30,7 +32,7 @@ export default function AntrianSampahPage() {
       const pending = data.filter((s: Setoran) => s.status === 'pending');
       
       setAntrianPickup(pending.filter((s: Setoran) => s.metode === 'pick-up'));
-      setAntrianDropoff(pending.filter((s: Setoran) => s.metode === 'drop-off'));
+      setAntrianDropoff(pending.filter((s: Setoran) => s.metode === 'antar-langsung' || s.metode === 'drop-off'));
     } catch (error) {
       console.error('Load antrian error:', error);
     } finally {
@@ -50,6 +52,34 @@ export default function AntrianSampahPage() {
       clearInterval(refreshInterval);
     };
   }, [loadAntrian]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const loadHargaJenisSampah = async () => {
+      try {
+        const response = await fetch('/api/jenis-sampah?active=true', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        if (!response.ok) return;
+
+        const result = (await response.json()) as {
+          data?: Array<{ nama: string; harga_per_kg: number }>;
+        };
+
+        const priceMap: Record<string, number> = {};
+        (result.data ?? []).forEach((item) => {
+          priceMap[item.nama] = Number(item.harga_per_kg ?? 0);
+        });
+        setHargaPerKgMap(priceMap);
+      } catch (error) {
+        console.error('Load harga jenis sampah error:', error);
+      }
+    };
+
+    void loadHargaJenisSampah();
+  }, [token]);
 
   const handleValidasi = (setoran: Setoran) => {
     console.log('Selected setoran:', setoran);
@@ -72,11 +102,10 @@ export default function AntrianSampahPage() {
     try {
       await setoranService.validate(selectedSetoran.id, {
         berat_sampah: Number(formData.berat_sampah),
-        harga_per_kg: Number(formData.harga_per_kg),
       });
       alert('Setoran berhasil divalidasi!');
       setShowModal(false);
-      setFormData({ berat_sampah: '', harga_per_kg: '' });
+      setFormData({ berat_sampah: '' });
       setSelectedSetoran(null);
       void loadAntrian();
     } catch (error: unknown) {
@@ -115,6 +144,9 @@ export default function AntrianSampahPage() {
   const filteredDropoff = antrianDropoff.filter((item) =>
     item.users?.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const selectedHargaPerKg = selectedSetoran ? (hargaPerKgMap[selectedSetoran.jenis_sampah] ?? 0) : 0;
+  const estimasiTotal = Number(formData.berat_sampah || 0) * selectedHargaPerKg;
 
   const SetoranCard = ({ item }: { item: Setoran }) => (
     <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -255,7 +287,7 @@ export default function AntrianSampahPage() {
               <p className="font-medium text-gray-800">{selectedSetoran.jenis_sampah}</p>
               
               <p className="text-sm text-gray-600 mb-1 mt-3">Metode</p>
-              <p className="font-medium text-gray-800 capitalize">{selectedSetoran.metode}</p>
+              <p className="font-medium text-gray-800 capitalize">{selectedSetoran.metode === 'antar-langsung' ? 'Drop Off' : 'Pick Up'}</p>
             </div>
 
             <form onSubmit={handleSubmitValidasi} className="space-y-4">
@@ -274,37 +306,27 @@ export default function AntrianSampahPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Harga per Kg (Rp)
-                </label>
-                <input
-                  type="number"
-                  value={formData.harga_per_kg}
-                  onChange={(e) => setFormData({ ...formData, harga_per_kg: e.target.value })}
-                  step="100"
-                  min="100"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-
-              {formData.berat_sampah && formData.harga_per_kg && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-sm text-green-800">
-                    <strong>Total:</strong> Rp {(
-                      parseFloat(formData.berat_sampah) * parseFloat(formData.harga_per_kg)
-                    ).toLocaleString('id-ID')}
-                  </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-800">Harga per Kg (Master)</span>
+                  <span className="font-semibold text-blue-900">
+                    Rp {selectedHargaPerKg.toLocaleString('id-ID')}
+                  </span>
                 </div>
-              )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-blue-800">Estimasi Total</span>
+                  <span className="font-bold text-blue-900">
+                    Rp {estimasiTotal.toLocaleString('id-ID')}
+                  </span>
+                </div>
+              </div>
 
               <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowModal(false);
-                    setFormData({ berat_sampah: '', harga_per_kg: '' });
+                    setFormData({ berat_sampah: '' });
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >

@@ -29,7 +29,12 @@ export async function GET(request: NextRequest) {
       orderBy: { nama: 'asc' }
     });
 
-    return apiSuccess({ data });
+    return apiSuccess({
+      data: data.map((item) => ({
+        ...item,
+        harga_per_kg: Number(item.harga_per_kg)
+      }))
+    });
   } catch (error) {
     console.error('Jenis sampah API error:', error);
     return apiError('Internal server error', 500);
@@ -45,7 +50,7 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return apiError(parsed.error, 400);
     }
-    const { nama, is_active } = parsed.data;
+    const { nama, harga_per_kg, is_active } = parsed.data;
 
     const existing = await prisma.jenisSampah.findUnique({ where: { nama } });
     if (existing) {
@@ -55,11 +60,15 @@ export async function POST(request: NextRequest) {
     const data = await prisma.jenisSampah.create({
       data: {
         nama,
+        harga_per_kg,
         is_active: is_active !== undefined ? is_active : true
       }
     });
 
-    return apiSuccess({ message: 'Jenis sampah berhasil ditambahkan', data });
+    return apiSuccess({
+      message: 'Jenis sampah berhasil ditambahkan',
+      data: { ...data, harga_per_kg: Number(data.harga_per_kg) }
+    });
   } catch (error) {
     console.error('Create jenis sampah error:', error);
     return apiError('Internal server error', 500);
@@ -75,7 +84,7 @@ export async function PUT(request: NextRequest) {
     if (!parsed.success) {
       return apiError(parsed.error, 400);
     }
-    const { id, nama, is_active } = parsed.data;
+    const { id, nama, harga_per_kg, is_active } = parsed.data;
 
     const currentData = await prisma.jenisSampah.findUnique({
       where: { id },
@@ -100,8 +109,9 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const updateData: { nama?: string; is_active?: boolean } = {};
+    const updateData: { nama?: string; harga_per_kg?: number; is_active?: boolean } = {};
     if (nama !== undefined) updateData.nama = nama;
+    if (harga_per_kg !== undefined) updateData.harga_per_kg = harga_per_kg;
     if (is_active !== undefined) updateData.is_active = is_active;
 
     const data = await prisma.jenisSampah.update({
@@ -109,7 +119,10 @@ export async function PUT(request: NextRequest) {
       data: updateData
     });
 
-    return apiSuccess({ message: 'Jenis sampah berhasil diupdate', data });
+    return apiSuccess({
+      message: 'Jenis sampah berhasil diupdate',
+      data: { ...data, harga_per_kg: Number(data.harga_per_kg) }
+    });
   } catch (error) {
     console.error('Update jenis sampah error:', error);
     return apiError('Internal server error', 500);

@@ -18,7 +18,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout, _hasHydrated, token } = useAuthStore();
+  const { user, logout, _hasHydrated } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [csWhatsapp, setCsWhatsapp] = useState('');
 
@@ -40,26 +40,29 @@ export default function DashboardLayout({
     }
   }, [user, _hasHydrated]);
 
-  // Fetch CS WhatsApp number
+  // Fetch CS WhatsApp number (public endpoint, no auth dependency)
   useEffect(() => {
-    if (!token || !user) return;
+    if (!user) return;
 
     const fetchSettings = async () => {
       try {
-        const response = await fetch('/api/settings', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await fetch('/api/settings/public', { cache: 'no-store' });
         if (response.ok) {
-          const data = await response.json();
+          const data = (await response.json()) as {
+            cs_whatsapp_number?: { value?: string };
+          };
           setCsWhatsapp(data.cs_whatsapp_number?.value || '');
+        } else {
+          setCsWhatsapp('');
         }
       } catch (err) {
         console.error('Failed to fetch settings:', err);
+        setCsWhatsapp('');
       }
     };
 
-    fetchSettings();
-  }, [token, user]);
+    void fetchSettings();
+  }, [user]);
 
   if (!_hasHydrated || !user) {
     return (

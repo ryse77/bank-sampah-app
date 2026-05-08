@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
             data: jenis_sampah.map((j) => ({
               id: String(j.id),
               nama: String(j.nama),
+              harga_per_kg: toNumberString(j.harga_per_kg, '0') ?? '0',
               is_active: Boolean(j.is_active),
               created_at: toDate(j.created_at),
               updated_at: toDate(j.updated_at),

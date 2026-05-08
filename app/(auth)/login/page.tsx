@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
-import dynamic from 'next/dynamic';
 import type { User } from '@/lib/types';
 
 type LoginResponse = {
@@ -13,17 +12,12 @@ type LoginResponse = {
 
 function LoginPageComponent() {
   const { user, _hasHydrated, setAuth } = useAuthStore();
-  const [mounted, setMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [csWhatsapp, setCsWhatsapp] = useState('');
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Fetch public settings (CS WhatsApp) for forgot password CTA
   useEffect(() => {
@@ -100,11 +94,6 @@ function LoginPageComponent() {
       setLoading(false); // Set false hanya jika error
     }
   };
-
-  // Tunda render sampai client mounted untuk mencegah mismatch SSR/CSR
-  if (!mounted) {
-    return null;
-  }
 
   // Show loading saat checking auth
   if (!_hasHydrated || isChecking) {
@@ -204,7 +193,4 @@ function LoginPageComponent() {
   );
 }
 
-// Non-SSR to avoid hydration mismatch from persisted store
-export default dynamic(() => Promise.resolve(LoginPageComponent), {
-  ssr: false,
-});
+export default LoginPageComponent;
