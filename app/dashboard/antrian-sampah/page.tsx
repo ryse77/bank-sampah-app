@@ -70,7 +70,10 @@ export default function AntrianSampahPage() {
     }
 
     try {
-      await setoranService.validate(selectedSetoran.id, formData);
+      await setoranService.validate(selectedSetoran.id, {
+        berat_sampah: Number(formData.berat_sampah),
+        harga_per_kg: Number(formData.harga_per_kg),
+      });
       alert('Setoran berhasil divalidasi!');
       setShowModal(false);
       setFormData({ berat_sampah: '', harga_per_kg: '' });

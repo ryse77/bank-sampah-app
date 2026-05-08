@@ -23,6 +23,12 @@ interface ArtikelRecord {
   gambar?: ArtikelImageValue;
 }
 
+const toArtikelGambarInput = (value: ArtikelImageValue): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value);
+};
+
 export default function EditArtikelPage({ params }: { params: Promise<{ id: string }> }) {
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) {
@@ -87,7 +93,7 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
           setFormData({
             judul: artikel.judul || '',
             konten: artikel.konten || '',
-            gambar: gambarValue
+            gambar: gambarValue ?? null
           });
           setExistingImage(displayImage);
         } else {
@@ -154,7 +160,7 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
       await artikelService.update(artikelId, {
         judul: formData.judul,
         konten: formData.konten,
-        gambar: gambarUrls
+        gambar: toArtikelGambarInput(gambarUrls)
       });
 
       alert('Artikel berhasil diperbarui!');

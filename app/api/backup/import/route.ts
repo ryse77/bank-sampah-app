@@ -23,6 +23,10 @@ type BackupPayload = {
 };
 
 const toDate = (value: unknown) => {
+  if (value instanceof Date) return value;
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return new Date();
+  }
   const d = new Date(value);
   return isNaN(d.getTime()) ? new Date() : d;
 };
@@ -32,6 +36,11 @@ const toNumberString = (value: unknown, fallback = '0') => {
   const num = Number(value);
   if (Number.isNaN(num)) return fallback;
   return num.toString();
+};
+
+const toNullableString = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  return String(value);
 };
 
 const asRecordArray = (value: unknown): Record<string, unknown>[] => {
@@ -125,18 +134,18 @@ export async function POST(request: NextRequest) {
       const usersCount = users.length > 0
         ? (await tx.user.createMany({
             data: users.map((u) => ({
-              id: u.id,
+              id: String(u.id),
               nama_lengkap: String(u.nama_lengkap),
               email: String(u.email),
               password: String(u.password),
-              no_hp: u.no_hp ?? null,
-              kelurahan: u.kelurahan ?? null,
-              kecamatan: u.kecamatan ?? null,
-              kabupaten: u.kabupaten ?? null,
-              detail_alamat: u.detail_alamat ?? null,
+              no_hp: toNullableString(u.no_hp),
+              kelurahan: toNullableString(u.kelurahan),
+              kecamatan: toNullableString(u.kecamatan),
+              kabupaten: toNullableString(u.kabupaten),
+              detail_alamat: toNullableString(u.detail_alamat),
               role: typeof u.role === 'string' && u.role ? u.role : 'pengguna',
-              qr_code: u.qr_code ?? null,
-              qr_data: u.qr_data ?? null,
+              qr_code: toNullableString(u.qr_code),
+              qr_data: toNullableString(u.qr_data),
               saldo: toNumberString(u.saldo, '0') ?? '0',
               profile_completed: Boolean(u.profile_completed),
               created_at: toDate(u.created_at),
@@ -148,7 +157,7 @@ export async function POST(request: NextRequest) {
       const jenisSampahCount = jenis_sampah.length > 0
         ? (await tx.jenisSampah.createMany({
             data: jenis_sampah.map((j) => ({
-              id: j.id,
+              id: String(j.id),
               nama: String(j.nama),
               is_active: Boolean(j.is_active),
               created_at: toDate(j.created_at),
@@ -160,10 +169,10 @@ export async function POST(request: NextRequest) {
       const settingsCount = settings.length > 0
         ? (await tx.appSetting.createMany({
             data: settings.map((s) => ({
-              id: s.id,
+              id: String(s.id),
               setting_key: String(s.setting_key),
               setting_value: String(s.setting_value),
-              description: s.description ?? null,
+              description: toNullableString(s.description),
               created_at: toDate(s.created_at),
               updated_at: toDate(s.updated_at),
             })),
@@ -173,10 +182,10 @@ export async function POST(request: NextRequest) {
       const artikelCount = artikel.length > 0
         ? (await tx.artikel.createMany({
             data: artikel.map((a) => ({
-              id: a.id,
+              id: String(a.id),
               judul: String(a.judul),
               konten: String(a.konten),
-              gambar: a.gambar ?? null,
+              gambar: toNullableString(a.gambar),
               admin_id: String(a.admin_id),
               created_at: toDate(a.created_at),
               updated_at: toDate(a.updated_at),
@@ -187,7 +196,7 @@ export async function POST(request: NextRequest) {
       const setoranCount = setoran.length > 0
         ? (await tx.setoranSampah.createMany({
             data: setoran.map((s) => ({
-              id: s.id,
+              id: String(s.id),
               user_id: String(s.user_id),
               jenis_sampah: String(s.jenis_sampah),
               berat_sampah: toNumberString(s.berat_sampah),
@@ -195,7 +204,7 @@ export async function POST(request: NextRequest) {
               total_harga: toNumberString(s.total_harga),
               metode: typeof s.metode === 'string' && s.metode ? s.metode : 'pick-up',
               status: typeof s.status === 'string' && s.status ? s.status : 'pending',
-              pengelola_id: s.pengelola_id ?? null,
+              pengelola_id: toNullableString(s.pengelola_id),
               tanggal_setor: toDate(s.tanggal_setor),
               tanggal_validasi: s.tanggal_validasi ? toDate(s.tanggal_validasi) : null,
             })),
@@ -205,14 +214,14 @@ export async function POST(request: NextRequest) {
       const pencairanCount = pencairan.length > 0
         ? (await tx.pencairanSaldo.createMany({
             data: pencairan.map((p) => ({
-              id: p.id,
+              id: String(p.id),
               user_id: String(p.user_id),
               nominal: toNumberString(p.nominal, '0') ?? '0',
               status: typeof p.status === 'string' && p.status ? p.status : 'pending',
-              pengelola_id: p.pengelola_id ?? null,
+              pengelola_id: toNullableString(p.pengelola_id),
               tanggal_request: toDate(p.tanggal_request),
               tanggal_pencairan: p.tanggal_pencairan ? toDate(p.tanggal_pencairan) : null,
-              catatan: p.catatan ?? null,
+              catatan: toNullableString(p.catatan),
             })),
           })).count
         : 0;

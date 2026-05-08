@@ -61,7 +61,10 @@ export default function SetorSampahPage() {
     setLoading(true);
 
     try {
-      await setoranService.create(formData);
+      await setoranService.create({
+        jenis_sampah: formData.jenis_sampah,
+        metode: formData.metode === 'drop-off' ? 'antar-langsung' : 'pick-up',
+      });
       alert('Setoran berhasil dibuat! Menunggu validasi dari pengelola.');
       router.push('/dashboard/riwayat-sampah');
     } catch (error: unknown) {

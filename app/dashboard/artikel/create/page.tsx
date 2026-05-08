@@ -16,6 +16,12 @@ type ArtikelImageValue =
   | string
   | null;
 
+const toArtikelGambarInput = (value: ArtikelImageValue): string | undefined => {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === 'string') return value;
+  return JSON.stringify(value);
+};
+
 export default function CreateArtikelPage() {
   const getErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof Error && error.message) {
@@ -86,7 +92,7 @@ export default function CreateArtikelPage() {
       await artikelService.create({
         judul: formData.judul,
         konten: formData.konten,
-        gambar: gambarUrls
+        gambar: toArtikelGambarInput(gambarUrls)
       });
 
       alert('Artikel berhasil dibuat!');

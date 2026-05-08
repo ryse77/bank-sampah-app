@@ -9,7 +9,8 @@ const normalizeArtikelGambar = (gambar: unknown): string | null | undefined => {
   if (gambar === undefined) return undefined;
   if (gambar === null) return null;
   if (typeof gambar === 'object') return JSON.stringify(gambar);
-  return gambar;
+  if (typeof gambar === 'string') return gambar;
+  return undefined;
 };
 
 export async function PUT(
@@ -34,7 +35,7 @@ export async function PUT(
     const updateData: { judul?: string; konten?: string; gambar?: string | null } = {};
     if (judul !== undefined) updateData.judul = judul;
     if (konten !== undefined) updateData.konten = konten;
-    if (gambar !== undefined) updateData.gambar = normalizeArtikelGambar(gambar) as string | null;
+    if (gambar !== undefined) updateData.gambar = normalizeArtikelGambar(gambar);
 
     const data = await prisma.artikel.update({
       where: { id },

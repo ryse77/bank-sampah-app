@@ -9,7 +9,8 @@ const normalizeArtikelGambar = (gambar: unknown): string | null | undefined => {
   if (gambar === undefined) return undefined;
   if (gambar === null) return null;
   if (typeof gambar === 'object') return JSON.stringify(gambar);
-  return gambar;
+  if (typeof gambar === 'string') return gambar;
+  return undefined;
 };
 
 export async function POST(request: NextRequest) {

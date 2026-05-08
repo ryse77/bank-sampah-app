@@ -107,12 +107,14 @@ export default function LaporanPage() {
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
         const setoranThisMonth = validated.filter((s) => {
+          if (!s.tanggal_validasi) return false;
           const date = new Date(s.tanggal_validasi);
+          if (Number.isNaN(date.getTime())) return false;
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         });
 
         const totalNominal = validated.reduce((sum: number, s) =>
-          sum + parseFloat(s.total_harga || 0), 0
+          sum + Number(s.total_harga ?? 0), 0
         );
 
         setStats(prev => ({
@@ -128,7 +130,7 @@ export default function LaporanPage() {
         setoranThisMonth.forEach((s) => {
           if (s.user_id && s.users) {
             const existing = memberEarnings.get(s.user_id);
-            const amount = parseFloat(s.total_harga || 0);
+            const amount = Number(s.total_harga ?? 0);
 
             if (existing) {
               existing.total += amount;
@@ -165,8 +167,8 @@ export default function LaporanPage() {
         validated.forEach((s) => {
           if (s.jenis_sampah) {
             const jenis = s.jenis_sampah;
-            const berat = parseFloat(s.berat_sampah || 0);
-            const nominal = parseFloat(s.total_harga || 0);
+            const berat = Number(s.berat_sampah ?? 0);
+            const nominal = Number(s.total_harga ?? 0);
 
             totalBerat += berat;
 
@@ -207,12 +209,14 @@ export default function LaporanPage() {
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
         const pencairanThisMonth = approved.filter((p) => {
+          if (!p.tanggal_pencairan) return false;
           const date = new Date(p.tanggal_pencairan);
+          if (Number.isNaN(date.getTime())) return false;
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         });
 
         const totalNominal = approved.reduce((sum: number, p) =>
-          sum + parseFloat(p.nominal || 0), 0
+          sum + Number(p.nominal ?? 0), 0
         );
 
         setStats(prev => ({

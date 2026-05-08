@@ -3,24 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import dynamic from 'next/dynamic';
+import type { User } from '@/lib/types';
 
 type LoginResponse = {
   error?: string;
   token?: string;
-  user?: {
-    id: string;
-    nama_lengkap: string;
-    email: string;
-    role: 'admin' | 'pengelola' | 'pengguna';
-    saldo?: number;
-    qr_code?: string | null;
-    profile_completed?: boolean;
-    no_hp?: string | null;
-    kelurahan?: string | null;
-    kecamatan?: string | null;
-    kabupaten?: string | null;
-    detail_alamat?: string | null;
-  };
+  user?: User;
 };
 
 function LoginPageComponent() {
@@ -93,6 +81,9 @@ function LoginPageComponent() {
 
       if (!response.ok) {
         throw new Error(data?.error || 'Login gagal');
+      }
+      if (!data?.user || !data?.token) {
+        throw new Error('Response login tidak valid');
       }
 
       // Simpan auth data
