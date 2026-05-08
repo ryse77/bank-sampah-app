@@ -4,6 +4,8 @@ import { useAuthStore } from '@/lib/store/authStore';
 import { useCallback, useEffect, useState } from 'react';
 import { clearAllCache } from '@/lib/cache-utils';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface MenuItem {
   title: string;
@@ -48,6 +50,7 @@ interface MemberRow {
 
 export default function DashboardPage() {
   const { user, token, _hasHydrated, setAuth } = useAuthStore();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
@@ -272,7 +275,7 @@ export default function DashboardPage() {
     // Setelah hydrate selesai, cek apakah ada user
     if (!user) {
       console.log('No user found after hydration, redirecting to login');
-      window.location.href = '/login';
+      router.replace('/login');
     } else {
       console.log('User authenticated:', user.nama_lengkap);
 
@@ -289,7 +292,7 @@ export default function DashboardPage() {
 
       setIsLoading(false);
     }
-  }, [user, _hasHydrated, fetchSettings, fetchUserData, fetchStats, fetchLatestArtikel, fetchAdminPengelolaStats]);
+  }, [user, _hasHydrated, fetchSettings, fetchUserData, fetchStats, fetchLatestArtikel, fetchAdminPengelolaStats, router]);
 
   // Auto-refresh data setiap 10 detik untuk real-time updates
   useEffect(() => {
@@ -441,12 +444,12 @@ export default function DashboardPage() {
           <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
             <p className="text-blue-800 font-medium">
               <span className="font-semibold">Artikel Terbaru:</span>{' '}
-              <a
+              <Link
                 href={`/dashboard/edukasi/${latestArtikel.id}`}
                 className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
               >
                 {latestArtikel.judul}
-              </a>
+              </Link>
             </p>
           </div>
         )}
@@ -459,7 +462,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mb-1">Total Setoran Saya</p>
                 <p className="text-3xl font-bold text-gray-900">{stats.totalSetoran}</p>
                 <p className="text-sm text-green-600 mt-1">Tervalidasi</p>
-                <a
+                <Link
                   href="/dashboard/riwayat-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
                 >
@@ -467,14 +470,14 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <p className="text-sm text-gray-600 mb-1">Menunggu Validasi</p>
                 <p className="text-3xl font-bold text-yellow-600">{stats.pendingValidation}</p>
                 <p className="text-sm text-yellow-600 mt-1">Perlu review</p>
-                <a
+                <Link
                   href="/dashboard/riwayat-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-yellow-600 hover:text-yellow-700 font-medium"
                 >
@@ -482,7 +485,7 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
@@ -491,7 +494,7 @@ export default function DashboardPage() {
                   Rp {stats.saldoTersedia.toLocaleString('id-ID')}
                 </p>
                 <p className="text-sm text-green-600 mt-1">Siap dicairkan</p>
-                <a
+                <Link
                   href="/dashboard/saldo"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
                 >
@@ -499,7 +502,7 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
             </>
           )}
@@ -510,7 +513,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mb-1">Pengajuan Pencairan</p>
                 <p className="text-3xl font-bold text-purple-600">{stats.pengajuanPencairan}</p>
                 <p className="text-sm text-purple-600 mt-1">Menunggu persetujuan</p>
-                <a
+                <Link
                   href="/dashboard/pencairan"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium"
                 >
@@ -518,14 +521,14 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <p className="text-sm text-gray-600 mb-1">Total Antrian Sampah</p>
                 <p className="text-3xl font-bold text-orange-600">{stats.pendingValidation}</p>
                 <p className="text-sm text-orange-600 mt-1">Belum tervalidasi</p>
-                <a
+                <Link
                   href="/dashboard/antrian-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-orange-600 hover:text-orange-700 font-medium"
                 >
@@ -533,14 +536,14 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <p className="text-sm text-gray-600 mb-1">Setoran Hari Ini</p>
                 <p className="text-3xl font-bold text-green-600">{stats.setoranHariIni}</p>
                 <p className="text-sm text-green-600 mt-1">Transaksi</p>
-                <a
+                <Link
                   href="/dashboard/riwayat-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
                 >
@@ -548,7 +551,7 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
             </>
           )}
@@ -559,7 +562,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600 mb-1">Pengajuan Pencairan</p>
                 <p className="text-3xl font-bold text-purple-600">{stats.pengajuanPencairan}</p>
                 <p className="text-sm text-purple-600 mt-1">Menunggu persetujuan</p>
-                <a
+                <Link
                   href="/dashboard/pencairan"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-purple-600 hover:text-purple-700 font-medium"
                 >
@@ -567,14 +570,14 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <p className="text-sm text-gray-600 mb-1">Total Antrian Sampah</p>
                 <p className="text-3xl font-bold text-orange-600">{stats.pendingValidation}</p>
                 <p className="text-sm text-orange-600 mt-1">Belum tervalidasi</p>
-                <a
+                <Link
                   href="/dashboard/antrian-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-orange-600 hover:text-orange-700 font-medium"
                 >
@@ -582,14 +585,14 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
                 <p className="text-sm text-gray-600 mb-1">Total Setoran</p>
                 <p className="text-3xl font-bold text-green-600">{stats.totalSetoranAll}</p>
                 <p className="text-sm text-green-600 mt-1">Tervalidasi</p>
-                <a
+                <Link
                   href="/dashboard/riwayat-sampah"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-green-600 hover:text-green-700 font-medium"
                 >
@@ -597,7 +600,7 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
 
               <div className="bg-white rounded-lg shadow p-6">
@@ -606,7 +609,7 @@ export default function DashboardPage() {
                   Rp {stats.totalPencairan.toLocaleString('id-ID')}
                 </p>
                 <p className="text-sm text-blue-600 mt-1">Disetujui</p>
-                <a
+                <Link
                   href="/dashboard/pencairan"
                   className="inline-flex items-center gap-1 mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
@@ -614,7 +617,7 @@ export default function DashboardPage() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </Link>
               </div>
             </>
           )}
@@ -640,16 +643,16 @@ export default function DashboardPage() {
               const [borderColor, hoverBg, hoverBorder, iconBg] = bgColor.split(' ');
 
               return (
-                <button
+                <Link
                   key={index}
-                  onClick={() => window.location.href = menu.href}
-                  className={`p-6 border-2 ${borderColor} ${hoverBg} ${hoverBorder} rounded-lg transition-all text-center`}
+                  href={menu.href}
+                  className={`block p-6 border-2 ${borderColor} ${hoverBg} ${hoverBorder} rounded-lg transition-all text-center`}
                 >
                   <div className={`w-12 h-12 ${iconBg} rounded-lg flex items-center justify-center mx-auto mb-3`}>
                     <span className="text-2xl">{menu.icon}</span>
                   </div>
                   <p className="text-sm font-medium text-gray-900">{menu.title}</p>
-                </button>
+                </Link>
               );
             })}
           </div>

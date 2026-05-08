@@ -2,6 +2,8 @@
 
 import { useAuthStore } from '@/lib/store/authStore';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Menu, X, Home, Trash2, History, Wallet, BookOpen,
   FileText, Users, BarChart3, Clock, LogOut, ScanLine, Settings, MessageCircle
@@ -19,6 +21,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, logout, _hasHydrated } = useAuthStore();
+  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [csWhatsapp, setCsWhatsapp] = useState('');
 
@@ -26,19 +30,18 @@ export default function DashboardLayout({
     if (!_hasHydrated) return;
 
     if (!user) {
-      window.location.href = '/login';
+      router.replace('/login');
       return;
     }
 
-    const path = window.location.pathname;
     if (
       user.role === 'pengguna' &&
       user.profile_completed === false &&
-      path !== '/dashboard/complete-profile'
+      pathname !== '/dashboard/complete-profile'
     ) {
-      window.location.href = '/dashboard/complete-profile';
+      router.replace('/dashboard/complete-profile');
     }
-  }, [user, _hasHydrated]);
+  }, [user, _hasHydrated, pathname, router]);
 
   // Fetch CS WhatsApp number (public endpoint, no auth dependency)
   useEffect(() => {
@@ -129,11 +132,11 @@ export default function DashboardLayout({
   };
 
   const menuItems = getMenuItems();
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  const currentPath = pathname;
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
+    router.replace('/login');
   };
 
   return (
@@ -195,8 +198,9 @@ export default function DashboardLayout({
 
               return (
                 <li key={index}>
-                  <a
+                  <Link
                     href={item.href}
+                    onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-4 py-2.5 lg:py-3 rounded-lg transition-colors ${
                       isActive
                         ? 'bg-green-600 text-white'
@@ -205,7 +209,7 @@ export default function DashboardLayout({
                   >
                     <Icon className="w-5 h-5" />
                     <span className="font-medium text-sm lg:text-base">{item.title}</span>
-                  </a>
+                  </Link>
                 </li>
               );
             })}
