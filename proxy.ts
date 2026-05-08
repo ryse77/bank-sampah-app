@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export default function proxy(req: NextRequest) {
+export default function proxy() {
   // Passthrough proxy
   return NextResponse.next();
 }

@@ -21,10 +21,10 @@ const updateMock = vi.mocked(prisma.user.update);
 
 describe('POST /api/member/scan', () => {
   it('uses fallback email extraction and updates qr_data when matched', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
     findFirstMock
-      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce(null as unknown)
       .mockResolvedValueOnce({
         id: 'u-1',
         nama_lengkap: 'Budi',
@@ -32,9 +32,9 @@ describe('POST /api/member/scan', () => {
         saldo: 15000,
         qr_code: null,
         qr_data: 'OLD-QR'
-      } as any);
+      } as unknown);
 
-    updateMock.mockResolvedValue({} as any);
+    updateMock.mockResolvedValue({} as unknown);
 
     const req = new Request('http://localhost/api/member/scan', {
       method: 'POST',
@@ -42,7 +42,7 @@ describe('POST /api/member/scan', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -51,10 +51,10 @@ describe('POST /api/member/scan', () => {
   });
 
   it('returns 404 when no user match found', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
-    findFirstMock.mockResolvedValue(null as any);
-    vi.mocked(prisma.user.findMany).mockResolvedValue([] as any);
+    findFirstMock.mockResolvedValue(null as unknown);
+    vi.mocked(prisma.user.findMany).mockResolvedValue([] as unknown);
 
     const req = new Request('http://localhost/api/member/scan', {
       method: 'POST',
@@ -62,7 +62,7 @@ describe('POST /api/member/scan', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(404);

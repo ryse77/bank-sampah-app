@@ -8,6 +8,13 @@ import { Trash2, Package, Loader2 } from 'lucide-react';
 import { JenisSampah } from '@/lib/types';
 
 export default function SetorSampahPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const router = useRouter();
   const { token } = useAuthStore();
   const [loading, setLoading] = useState(false);
@@ -57,8 +64,8 @@ export default function SetorSampahPage() {
       await setoranService.create(formData);
       alert('Setoran berhasil dibuat! Menunggu validasi dari pengelola.');
       router.push('/dashboard/riwayat-sampah');
-    } catch (error: any) {
-      alert(error.message || 'Gagal membuat setoran');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal membuat setoran'));
     } finally {
       setLoading(false);
     }

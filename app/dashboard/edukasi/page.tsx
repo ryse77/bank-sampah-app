@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { artikelService } from '@/lib/api';
 import { BookOpen, Calendar, User } from 'lucide-react';
 import { getArtikelImageUrl } from '@/lib/artikel-utils';
+import Image from 'next/image';
 
 interface ArtikelData {
   id: string;
@@ -71,9 +72,12 @@ export default function EdukasiPage() {
         <article className="bg-white rounded-lg shadow-lg overflow-hidden">
           {selectedArtikel.gambar && getArtikelImageUrl(selectedArtikel.gambar) && (
             <div className="w-full h-64 bg-gray-200 overflow-hidden">
-              <img
+              <Image
                 src={getArtikelImageUrl(selectedArtikel.gambar, 'desktop')}
                 alt={selectedArtikel.judul}
+                width={1280}
+                height={512}
+                unoptimized
                 className="w-full h-full object-cover"
                 loading="lazy"
               />
@@ -135,9 +139,12 @@ export default function EdukasiPage() {
             >
               {a.gambar && getArtikelImageUrl(a.gambar) ? (
                 <div className="h-48 bg-gray-200 overflow-hidden">
-                  <img
+                  <Image
                     src={getArtikelImageUrl(a.gambar, 'tablet')}
                     alt={a.judul}
+                    width={640}
+                    height={384}
+                    unoptimized
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />

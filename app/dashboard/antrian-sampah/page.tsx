@@ -1,11 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { setoranService } from '@/lib/api';
 import { Setoran } from '@/lib/types';
 import { ListChecks, Package, Truck, MessageCircle, Search } from 'lucide-react';
 
 export default function AntrianSampahPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const [antrianPickup, setAntrianPickup] = useState<Setoran[]>([]);
   const [antrianDropoff, setAntrianDropoff] = useState<Setoran[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,20 +24,7 @@ export default function AntrianSampahPage() {
     harga_per_kg: ''
   });
 
-  useEffect(() => {
-    loadAntrian();
-
-    // Auto-refresh setiap 3 detik untuk near-realtime updates
-    const refreshInterval = setInterval(() => {
-      loadAntrian();
-    }, 3000); // Lebih cepat dari sebelumnya
-
-    return () => {
-      clearInterval(refreshInterval);
-    };
-  }, []);
-
-  const loadAntrian = async () => {
+  const loadAntrian = useCallback(async () => {
     try {
       const data = await setoranService.list();
       const pending = data.filter((s: Setoran) => s.status === 'pending');
@@ -42,7 +36,20 @@ export default function AntrianSampahPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadAntrian();
+
+    // Auto-refresh setiap 3 detik untuk near-realtime updates
+    const refreshInterval = setInterval(() => {
+      void loadAntrian();
+    }, 3000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [loadAntrian]);
 
   const handleValidasi = (setoran: Setoran) => {
     console.log('Selected setoran:', setoran);
@@ -68,10 +75,10 @@ export default function AntrianSampahPage() {
       setShowModal(false);
       setFormData({ berat_sampah: '', harga_per_kg: '' });
       setSelectedSetoran(null);
-      loadAntrian();
-    } catch (error: any) {
+      void loadAntrian();
+    } catch (error: unknown) {
       console.error('Validasi error:', error);
-      alert(error.message || 'Gagal validasi setoran');
+      alert(getErrorMessage(error, 'Gagal validasi setoran'));
     }
   };
 

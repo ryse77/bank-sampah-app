@@ -1,11 +1,18 @@
 ﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { JenisSampah } from '@/lib/types';
 import { Settings, Save, Loader2, Phone, Package, Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Database, Download, Upload, ShieldAlert } from 'lucide-react';
 
 export default function SettingsPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { user, token } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'general' | 'jenis-sampah' | 'backup'>('general');
   const [loading, setLoading] = useState(true);
@@ -30,16 +37,7 @@ export default function SettingsPage() {
     is_active: true
   });
 
-  useEffect(() => {
-    if (user?.role !== 'admin') {
-      window.location.href = '/dashboard';
-      return;
-    }
-    fetchSettings();
-    fetchJenisSampah();
-  }, [user]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -54,14 +52,14 @@ export default function SettingsPage() {
 
       const data = await response.json();
       setCsWhatsapp(data.cs_whatsapp_number?.value || '');
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat settings');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memuat settings'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const fetchJenisSampah = async () => {
+  const fetchJenisSampah = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -78,11 +76,20 @@ export default function SettingsPage() {
       const result = await response.json();
       console.log('Fetched jenis sampah:', result.data); // Debug log
       setJenisSampahList(result.data || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Fetch jenis sampah error:', err);
-      setError('Gagal memuat data jenis sampah');
+      setError(getErrorMessage(err, 'Gagal memuat data jenis sampah'));
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (user?.role !== 'admin') {
+      window.location.href = '/dashboard';
+      return;
+    }
+    void fetchSettings();
+    void fetchJenisSampah();
+  }, [user, fetchSettings, fetchJenisSampah]);
 
   const handleJenisSampahSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,9 +146,9 @@ export default function SettingsPage() {
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Submit error:', err); // Debug log
-      setError(err.message || 'Gagal menyimpan jenis sampah');
+      setError(getErrorMessage(err, 'Gagal menyimpan jenis sampah'));
     } finally {
       setSaving(false);
     }
@@ -177,9 +184,9 @@ export default function SettingsPage() {
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Delete error:', err); // Debug log
-      setError(err.message || 'Gagal menghapus jenis sampah');
+      setError(getErrorMessage(err, 'Gagal menghapus jenis sampah'));
     }
   };
 
@@ -213,9 +220,9 @@ export default function SettingsPage() {
 
       // Refresh the list
       await fetchJenisSampah();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Toggle error:', err); // Debug log
-      setError(err.message || 'Gagal mengubah status');
+      setError(getErrorMessage(err, 'Gagal mengubah status'));
     }
   };
 
@@ -262,8 +269,8 @@ export default function SettingsPage() {
 
       setSuccess('Settings berhasil disimpan!');
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Gagal menyimpan settings');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal menyimpan settings'));
     } finally {
       setSaving(false);
     }
@@ -316,8 +323,8 @@ export default function SettingsPage() {
       window.URL.revokeObjectURL(url);
 
       setBackupMessage('Export berhasil. Simpan file JSON ini untuk pemulihan.');
-    } catch (err: any) {
-      setBackupError(err.message || 'Gagal mengekspor data');
+    } catch (err: unknown) {
+      setBackupError(getErrorMessage(err, 'Gagal mengekspor data'));
     } finally {
       setExporting(false);
     }
@@ -355,8 +362,8 @@ export default function SettingsPage() {
       setBackupMessage('Import berhasil. Data telah diperbarui sesuai backup.');
       setImportFile(null);
       alert('Import berhasil. Data telah diperbarui sesuai backup.');
-    } catch (err: any) {
-      setBackupError(err.message || 'Gagal mengimpor data');
+    } catch (err: unknown) {
+      setBackupError(getErrorMessage(err, 'Gagal mengimpor data'));
     } finally {
       setImporting(false);
     }
@@ -471,7 +478,7 @@ export default function SettingsPage() {
                         />
                       </div>
                       <p className="mt-2 text-sm text-gray-500">
-                        Nomor akan ditampilkan sebagai tombol "Hubungi CS" di dashboard user.
+                        Nomor akan ditampilkan sebagai tombol &quot;Hubungi CS&quot; di dashboard user.
                         Format: 628xxxxxxxxxx (dengan kode negara 62)
                       </p>
                     </div>
@@ -528,7 +535,7 @@ export default function SettingsPage() {
                     <div>
                       <p className="text-sm font-semibold text-blue-900 mb-1">Customer Service:</p>
                       <ul className="text-sm text-blue-800 space-y-1">
-                        <li>- Nomor WhatsApp akan digunakan untuk tombol "Hubungi CS" di dashboard user</li>
+                        <li>- Nomor WhatsApp akan digunakan untuk tombol &quot;Hubungi CS&quot; di dashboard user</li>
                         <li>- Format nomor harus menggunakan kode negara (62 untuk Indonesia)</li>
                         <li>- Contoh: 628123456789 (untuk nomor 0812-3456-789)</li>
                       </ul>
@@ -752,7 +759,7 @@ export default function SettingsPage() {
                         <tr>
                           <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
                             <Package className="w-12 h-12 mx-auto mb-2 text-gray-400" />
-                            <p>Belum ada jenis sampah. Klik "Tambah Baru" untuk menambahkan.</p>
+                            <p>Belum ada jenis sampah. Klik &quot;Tambah Baru&quot; untuk menambahkan.</p>
                           </td>
                         </tr>
                       ) : (

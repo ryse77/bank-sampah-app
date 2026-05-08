@@ -68,8 +68,9 @@ export default function RegisterPage() {
         router.push('/login');
       }, 2000);
 
-    } catch (err: any) {
-      setError(err.message || 'Registrasi gagal');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registrasi gagal';
+      setError(message);
     } finally {
       setLoading(false);
     }

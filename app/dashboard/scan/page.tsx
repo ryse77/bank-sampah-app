@@ -15,8 +15,10 @@ interface ScannedUser {
 interface AntrianSampah {
   id: string;
   jenis_sampah: string;
-  metode: 'pick-up' | 'drop-off';
+  metode: 'pick-up' | 'antar-langsung';
   tanggal_setor: string;
+  status: 'pending' | 'validated' | 'rejected';
+  user_id: string;
   users?: {
     nama_lengkap: string;
     email: string;
@@ -41,6 +43,10 @@ export default function ScanPage() {
     berat_sampah: '',
     harga_per_kg: ''
   });
+
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    return err instanceof Error ? err.message : fallback;
+  };
 
   useEffect(() => {
     // Cleanup scanner on unmount
@@ -68,11 +74,11 @@ export default function ScanPage() {
           handleQRScan(decodedText);
           stopScanning();
         },
-        (errorMessage) => {
+        () => {
           // Scanning error (normal saat mencari QR)
         }
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Start scanning error:', err);
       setError('Gagal mengakses kamera. Pastikan izin kamera sudah diberikan.');
       setScanning(false);
@@ -98,7 +104,7 @@ export default function ScanPage() {
     try {
       // Coba parse sebagai user ID langsung dulu
       await fetchUserByQR(qrData);
-    } catch (err) {
+    } catch {
       setError('QR Code tidak valid');
     }
   };
@@ -125,8 +131,8 @@ export default function ScanPage() {
 
       // Fetch antrian pending milik user ini
       await fetchAntrianUser(userData.id);
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat data user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memuat data user'));
     }
   };
 
@@ -143,9 +149,9 @@ export default function ScanPage() {
         throw new Error('Gagal memuat antrian');
       }
 
-      const allSetoran = await response.json();
+      const allSetoran = (await response.json()) as AntrianSampah[];
       const userPendingAntrian = allSetoran.filter(
-        (s: any) => s.user_id === userId && s.status === 'pending'
+        (s) => s.user_id === userId && s.status === 'pending'
       );
 
       if (userPendingAntrian.length === 0) {
@@ -164,8 +170,8 @@ export default function ScanPage() {
         // Jika lebih dari 1, tampilkan list untuk dipilih
         setShowAntrianList(true);
       }
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat antrian');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memuat antrian'));
     }
   };
 
@@ -200,8 +206,8 @@ export default function ScanPage() {
 
       // Fetch antrian pending milik user ini
       await fetchAntrianUser(userData.id);
-    } catch (err: any) {
-      setError(err.message || 'Gagal memuat data user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Gagal memuat data user'));
     }
   };
 
@@ -237,8 +243,8 @@ export default function ScanPage() {
         berat_sampah: '',
         harga_per_kg: ''
       });
-    } catch (err: any) {
-      alert(err.message || 'Gagal memvalidasi setoran');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gagal memvalidasi setoran'));
     }
   };
 
@@ -312,7 +318,7 @@ export default function ScanPage() {
           {!scanning && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                Klik tombol "Mulai Scan" untuk mengaktifkan kamera dan scan QR code member.
+                Klik tombol &quot;Mulai Scan&quot; untuk mengaktifkan kamera dan scan QR code member.
               </p>
             </div>
           )}

@@ -2,16 +2,33 @@
 
 import { useState } from 'react';
 import { artikelService } from '@/lib/api';
-import { ArrowLeft, BookOpen, Upload, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { processAndUploadArticleImage } from '@/lib/image-utils';
 import { useAuthStore } from '@/lib/store/authStore';
+import Image from 'next/image';
+
+type ArtikelImageValue =
+  | {
+      desktop?: string;
+      tablet?: string;
+      mobile?: string;
+    }
+  | string
+  | null;
 
 export default function CreateArtikelPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { token } = useAuthStore();
   const [formData, setFormData] = useState({
     judul: '',
     konten: '',
-    gambar: null as any
+    gambar: null as ArtikelImageValue
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
@@ -60,9 +77,9 @@ export default function CreateArtikelPage() {
         try {
           gambarUrls = await processAndUploadArticleImage(imageFile, token);
           setUploadingImage(false);
-        } catch (uploadError: any) {
+        } catch (uploadError: unknown) {
           setUploadingImage(false);
-          throw new Error(`Gagal upload gambar: ${uploadError.message}`);
+          throw new Error(`Gagal upload gambar: ${getErrorMessage(uploadError, 'Unknown error')}`);
         }
       }
 
@@ -74,8 +91,8 @@ export default function CreateArtikelPage() {
 
       alert('Artikel berhasil dibuat!');
       window.location.href = '/dashboard/artikel';
-    } catch (error: any) {
-      setError(error.message || 'Gagal membuat artikel');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Gagal membuat artikel'));
       setLoading(false);
     }
   };
@@ -132,9 +149,12 @@ export default function CreateArtikelPage() {
               <div className="space-y-1 text-center">
                 {imagePreview ? (
                   <div className="relative">
-                    <img
+                    <Image
                       src={imagePreview}
                       alt="Preview"
+                      width={640}
+                      height={320}
+                      unoptimized
                       className="mx-auto h-48 w-auto rounded-lg"
                     />
                     <button

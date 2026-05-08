@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { memberService } from '@/lib/api';
 import { User } from '@/lib/types';
 import { Users, Search, MessageCircle, UserPlus, Trash2, Eye, X, Upload, Download, FileText, KeyRound } from 'lucide-react';
-import Link from 'next/link';
 import { useAuthStore } from '@/lib/store/authStore';
 import { clearAllCache } from '@/lib/cache-utils';
 
 export default function MemberPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { user: currentUser } = useAuthStore();
   const [members, setMembers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,13 +50,7 @@ export default function MemberPage() {
 
   const isAdmin = currentUser?.role === 'admin';
 
-  useEffect(() => {
-    // Clear cache saat pertama kali load
-    clearAllCache().catch(err => console.error('Cache clear error:', err));
-    loadMembers();
-  }, [roleFilter]);
-
-  const loadMembers = async () => {
+  const loadMembers = useCallback(async () => {
     try {
       // Reset members ke empty array untuk show fresh data
       setMembers([]);
@@ -61,7 +61,13 @@ export default function MemberPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleFilter, searchQuery]);
+
+  useEffect(() => {
+    // Clear cache saat pertama kali load
+    clearAllCache().catch((err) => console.error('Cache clear error:', err));
+    void loadMembers();
+  }, [loadMembers]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
@@ -111,9 +117,9 @@ export default function MemberPage() {
       }
       setShowImportModal(false);
       setImportFile(null);
-      handleManualRefresh();
-    } catch (err: any) {
-      alert(err.message || 'Gagal import');
+      void handleManualRefresh();
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gagal import'));
     } finally {
       setImporting(false);
     }
@@ -140,8 +146,8 @@ export default function MemberPage() {
       a.download = `member-${new Date().toISOString().split('T')[0]}.xlsx`;
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(err.message || 'Gagal export');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gagal export'));
     }
   };
 
@@ -166,8 +172,8 @@ export default function MemberPage() {
       a.download = 'template-import-member.xlsx';
       a.click();
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      alert(err.message || 'Gagal download template');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gagal download template'));
     }
   };
 
@@ -228,8 +234,8 @@ export default function MemberPage() {
         role: 'pengguna'
       });
       loadMembers();
-    } catch (error: any) {
-      alert(error.message || 'Gagal membuat akun');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal membuat akun'));
     }
   };
 
@@ -255,8 +261,8 @@ export default function MemberPage() {
 
       alert('Akun berhasil dihapus!');
       loadMembers();
-    } catch (error: any) {
-      alert(error.message || 'Gagal menghapus akun');
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal menghapus akun'));
     }
   };
 
@@ -292,8 +298,8 @@ export default function MemberPage() {
       setShowPasswordModal(false);
       setPasswordForm({ password: '', confirmPassword: '' });
       setPasswordError('');
-    } catch (error: any) {
-      setPasswordError(error.message || 'Gagal mengubah password');
+    } catch (error: unknown) {
+      setPasswordError(getErrorMessage(error, 'Gagal mengubah password'));
     } finally {
       setChangingPassword(false);
     }

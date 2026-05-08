@@ -22,8 +22,8 @@ const requireRoleMock = vi.mocked(requireRole);
 
 describe('/api/jenis-sampah guards', () => {
   it('rejects duplicate name on create', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
-    vi.mocked(prisma.jenisSampah.findUnique).mockResolvedValue({ id: 'j1', nama: 'Plastik' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
+    vi.mocked(prisma.jenisSampah.findUnique).mockResolvedValue({ id: 'j1', nama: 'Plastik' } as unknown);
 
     const req = new Request('http://localhost/api/jenis-sampah', {
       method: 'POST',
@@ -31,7 +31,7 @@ describe('/api/jenis-sampah guards', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -39,15 +39,15 @@ describe('/api/jenis-sampah guards', () => {
   });
 
   it('rejects delete when jenis sampah has related transactions', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
-    vi.mocked(prisma.jenisSampah.findUnique).mockResolvedValue({ nama: 'Plastik' } as any);
-    vi.mocked(prisma.setoranSampah.findFirst).mockResolvedValue({ id: 's1' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
+    vi.mocked(prisma.jenisSampah.findUnique).mockResolvedValue({ nama: 'Plastik' } as unknown);
+    vi.mocked(prisma.setoranSampah.findFirst).mockResolvedValue({ id: 's1' } as unknown);
 
     const req = new Request('http://localhost/api/jenis-sampah?id=j1', {
       method: 'DELETE'
     });
 
-    const res = await DELETE(req as any);
+    const res = await DELETE(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(400);

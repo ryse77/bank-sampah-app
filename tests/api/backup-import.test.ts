@@ -19,7 +19,7 @@ const transactionMock = vi.mocked(prisma.$transaction);
 
 describe('POST /api/backup/import', () => {
   it('returns 400 when file is missing', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
     const formData = new FormData();
     const req = new Request('http://localhost/api/backup/import', {
@@ -27,7 +27,7 @@ describe('POST /api/backup/import', () => {
       body: formData
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -35,7 +35,7 @@ describe('POST /api/backup/import', () => {
   });
 
   it('returns 413 when file exceeds limit', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
     const largeContent = 'a'.repeat(10 * 1024 * 1024 + 1);
     const file = new File([largeContent], 'backup.json', { type: 'application/json' });
@@ -47,7 +47,7 @@ describe('POST /api/backup/import', () => {
       body: formData
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(413);
@@ -55,7 +55,7 @@ describe('POST /api/backup/import', () => {
   });
 
   it('returns 200 and inserted counts on success', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
     transactionMock.mockResolvedValue({
       users: 1,
       jenis_sampah: 1,
@@ -63,7 +63,7 @@ describe('POST /api/backup/import', () => {
       artikel: 0,
       setoran: 0,
       pencairan: 0
-    } as any);
+    } as unknown);
 
     const payload = {
       metadata: { version: '1.0' },
@@ -86,7 +86,7 @@ describe('POST /api/backup/import', () => {
       body: formData
     });
 
-    const res = await POST(req as any);
+    const res = await POST(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(200);

@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import { pencairanService } from '@/lib/api';
 import { Pencairan } from '@/lib/types';
-import { Wallet, ArrowDownCircle } from 'lucide-react';
+import { Wallet } from 'lucide-react';
 
 export default function SaldoPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const user = useAuthStore((state) => state.user);
   const [pencairan, setPencairan] = useState<Pencairan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,11 +21,7 @@ export default function SaldoPage() {
   const [nominal, setNominal] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    loadPencairan();
-  }, []);
-
-  const loadPencairan = async () => {
+  const loadPencairan = useCallback(async () => {
     try {
       const data = await pencairanService.list();
       setPencairan(data);
@@ -27,7 +30,11 @@ export default function SaldoPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadPencairan();
+  }, [loadPencairan]);
 
   const handleRequestPencairan = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +45,9 @@ export default function SaldoPage() {
       alert('Permintaan pencairan berhasil dibuat!');
       setShowModal(false);
       setNominal('');
-      loadPencairan();
-    } catch (error: any) {
-      alert(error.message || 'Gagal membuat permintaan pencairan');
+      void loadPencairan();
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal membuat permintaan pencairan'));
     } finally {
       setSubmitting(false);
     }

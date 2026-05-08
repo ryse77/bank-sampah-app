@@ -1,20 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-
-interface User {
-  id: string;
-  nama_lengkap: string;
-  email: string;
-  role: 'admin' | 'pengelola' | 'pengguna';
-  saldo: number;
-  no_hp?: string;
-  kelurahan?: string;
-  kecamatan?: string;
-  kabupaten?: string;
-  detail_alamat?: string;
-  profile_completed?: boolean;
-  qr_code?: string;
-}
+import type { User } from '@/lib/types';
 
 interface AuthState {
   user: User | null;
@@ -26,13 +12,17 @@ interface AuthState {
   updateUser: (user: User) => void;
 }
 
-// Custom storage yang lebih reliable untuk PWA
+interface PersistedAuthState {
+  user: User | null;
+  token: string | null;
+}
+
 const customStorage = {
   getItem: (name: string): string | null => {
     if (typeof window === 'undefined') return null;
     try {
       return localStorage.getItem(name);
-    } catch (error) {
+    } catch {
       return null;
     }
   },
@@ -40,7 +30,7 @@ const customStorage = {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(name, value);
-    } catch (error) {
+    } catch {
       // ignore
     }
   },
@@ -48,7 +38,7 @@ const customStorage = {
     if (typeof window === 'undefined') return;
     try {
       localStorage.removeItem(name);
-    } catch (error) {
+    } catch {
       // ignore
     }
   },
@@ -76,14 +66,13 @@ export const useAuthStore = create<AuthState>()(
         }),
     }),
     {
-      name: 'bank-sampah-auth', // Unique name for this app
+      name: 'bank-sampah-auth',
       storage: createJSONStorage(() => customStorage),
-      // Only persist user and token, not _hasHydrated
-      partialize: (state) => ({
+      partialize: (state): PersistedAuthState => ({
         user: state.user,
         token: state.token,
       }),
-      version: 2, // bump to ensure new fields persisted
+      version: 2,
       onRehydrateStorage: () => {
         return (state, error) => {
           if (!error) {
@@ -91,12 +80,16 @@ export const useAuthStore = create<AuthState>()(
           }
         };
       },
-      migrate: (persistedState: any) => {
-        // ensure profile_completed exists
-        if (persistedState?.user && persistedState.user.profile_completed === undefined) {
-          persistedState.user.profile_completed = false;
-        }
-        return persistedState;
+      migrate: (persistedState: unknown): PersistedAuthState => {
+        const state = (persistedState ?? {}) as Partial<PersistedAuthState>;
+        const user = state.user
+          ? { ...state.user, profile_completed: state.user.profile_completed ?? false }
+          : null;
+
+        return {
+          user,
+          token: state.token ?? null,
+        };
       },
     }
   )

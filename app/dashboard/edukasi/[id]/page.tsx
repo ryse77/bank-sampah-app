@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { artikelService } from '@/lib/api';
-import { BookOpen, Calendar, User, ArrowLeft } from 'lucide-react';
+import { Calendar, User, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 interface ArtikelData {
   id: string;
@@ -93,9 +94,12 @@ export default function ArtikelDetailPage({ params }: { params: Promise<{ id: st
       <article className="bg-white rounded-lg shadow-lg overflow-hidden">
         {artikel.gambar && (
           <div className="w-full h-64 bg-gray-200 overflow-hidden">
-            <img
+            <Image
               src={artikel.gambar}
               alt={artikel.judul}
+              width={1280}
+              height={512}
+              unoptimized
               className="w-full h-full object-cover"
             />
           </div>

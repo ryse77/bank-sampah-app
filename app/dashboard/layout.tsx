@@ -9,7 +9,7 @@ import {
 
 interface MenuItem {
   title: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   href: string;
 }
 
@@ -20,12 +20,7 @@ export default function DashboardLayout({
 }) {
   const { user, logout, _hasHydrated, token } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [csWhatsapp, setCsWhatsapp] = useState('');
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!_hasHydrated) return;
@@ -66,7 +61,7 @@ export default function DashboardLayout({
     fetchSettings();
   }, [token, user]);
 
-  if (!isMounted || !_hasHydrated || !user) {
+  if (!_hasHydrated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>

@@ -25,7 +25,7 @@ const requireRoleMock = vi.mocked(requireRole);
 
 describe('Financial auth guards', () => {
   it('setoran create returns 401 when unauthenticated', async () => {
-    requireAuthMock.mockReturnValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) as any);
+    requireAuthMock.mockReturnValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) as unknown);
 
     const req = new Request('http://localhost/api/setoran/create', {
       method: 'POST',
@@ -33,12 +33,12 @@ describe('Financial auth guards', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await createSetoran(req as any);
+    const res = await createSetoran(req as unknown);
     expect(res.status).toBe(401);
   });
 
   it('pencairan request returns 401 when unauthenticated', async () => {
-    requireAuthMock.mockReturnValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) as any);
+    requireAuthMock.mockReturnValue(new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) as unknown);
 
     const req = new Request('http://localhost/api/pencairan/request', {
       method: 'POST',
@@ -46,12 +46,12 @@ describe('Financial auth guards', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await requestPencairan(req as any);
+    const res = await requestPencairan(req as unknown);
     expect(res.status).toBe(401);
   });
 
   it('setoran validate returns 403 when role is forbidden', async () => {
-    requireRoleMock.mockReturnValue(new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }) as any);
+    requireRoleMock.mockReturnValue(new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }) as unknown);
 
     const req = new Request('http://localhost/api/setoran/validate/s1', {
       method: 'POST',
@@ -59,12 +59,12 @@ describe('Financial auth guards', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await validateSetoran(req as any, { params: Promise.resolve({ id: 's1' }) });
+    const res = await validateSetoran(req as unknown, { params: Promise.resolve({ id: 's1' }) });
     expect(res.status).toBe(403);
   });
 
   it('pencairan approve returns 403 when role is forbidden', async () => {
-    requireRoleMock.mockReturnValue(new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }) as any);
+    requireRoleMock.mockReturnValue(new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 }) as unknown);
 
     const req = new Request('http://localhost/api/pencairan/approve/p1', {
       method: 'POST',
@@ -72,7 +72,7 @@ describe('Financial auth guards', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await approvePencairan(req as any, { params: Promise.resolve({ id: 'p1' }) });
+    const res = await approvePencairan(req as unknown, { params: Promise.resolve({ id: 'p1' }) });
     expect(res.status).toBe(403);
   });
 });

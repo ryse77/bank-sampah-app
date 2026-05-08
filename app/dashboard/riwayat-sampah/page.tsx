@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { setoranService } from '@/lib/api';
 import { Setoran } from '@/lib/types';
 import { History, Filter, Calendar } from 'lucide-react';
@@ -18,20 +18,7 @@ export default function RiwayatSampahPage() {
   // Check if current user is admin or pengelola
   const isAdminOrPengelola = currentUser?.role === 'admin' || currentUser?.role === 'pengelola';
 
-  useEffect(() => {
-    loadSetoran();
-
-    // Auto-refresh setiap 5 detik untuk near-realtime updates
-    const refreshInterval = setInterval(() => {
-      loadSetoran();
-    }, 5000); // Lebih cepat
-
-    return () => {
-      clearInterval(refreshInterval);
-    };
-  }, []);
-
-  const loadSetoran = async () => {
+  const loadSetoran = useCallback(async () => {
     try {
       const data = await setoranService.list();
       setSetoran(data);
@@ -40,7 +27,20 @@ export default function RiwayatSampahPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadSetoran();
+
+    // Auto-refresh setiap 5 detik untuk near-realtime updates
+    const refreshInterval = setInterval(() => {
+      void loadSetoran();
+    }, 5000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [loadSetoran]);
 
   // Filter by status
   let filteredSetoran = filter === 'all'
@@ -138,7 +138,9 @@ export default function RiwayatSampahPage() {
                 <Filter className="w-5 h-5 text-gray-500" />
                 <select
                   value={filter}
-                  onChange={(e) => setFilter(e.target.value as any)}
+                  onChange={(e) =>
+                    setFilter(e.target.value as 'all' | 'pending' | 'validated' | 'rejected')
+                  }
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 >
                   <option value="all">Semua Status</option>
@@ -159,7 +161,9 @@ export default function RiwayatSampahPage() {
                 <select
                   value={dateFilter}
                   onChange={(e) => {
-                    setDateFilter(e.target.value as any);
+                    setDateFilter(
+                      e.target.value as 'all' | 'today' | 'yesterday' | '7days' | '30days' | 'custom'
+                    );
                     if (e.target.value !== 'custom') {
                       setStartDate('');
                       setEndDate('');

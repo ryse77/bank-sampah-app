@@ -4,6 +4,13 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 
 export default function ProfilePage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { user, token, updateUser, _hasHydrated } = useAuthStore();
   const [formData, setFormData] = useState({
     no_hp: '',
@@ -13,11 +20,6 @@ export default function ProfilePage() {
     detail_alamat: '',
   });
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!_hasHydrated || !user) return;
@@ -50,14 +52,14 @@ export default function ProfilePage() {
         updateUser(data.user);
       }
       alert('Profil berhasil diperbarui');
-    } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan profil');
+    } catch (err: unknown) {
+      alert(getErrorMessage(err, 'Gagal menyimpan profil'));
     } finally {
       setLoading(false);
     }
   };
 
-  if (!mounted || !_hasHydrated || !user) {
+  if (!_hasHydrated || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>

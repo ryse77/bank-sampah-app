@@ -1,12 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { pencairanService } from '@/lib/api';
 import { Pencairan } from '@/lib/types';
 import { Wallet, CheckCircle, XCircle } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 
 export default function PencairanPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { user } = useAuthStore();
   const [pencairan, setPencairan] = useState<Pencairan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,20 +25,7 @@ export default function PencairanPage() {
 
   const isAdminOrPengelola = user?.role === 'admin' || user?.role === 'pengelola';
 
-  useEffect(() => {
-    loadPencairan();
-
-    // Auto-refresh setiap 5 detik untuk near-realtime updates
-    const refreshInterval = setInterval(() => {
-      loadPencairan();
-    }, 5000); // Lebih cepat
-
-    return () => {
-      clearInterval(refreshInterval);
-    };
-  }, [filter]);
-
-  const loadPencairan = async () => {
+  const loadPencairan = useCallback(async () => {
     try {
       const data = await pencairanService.list(filter === 'all' ? undefined : filter);
       setPencairan(data);
@@ -40,7 +34,20 @@ export default function PencairanPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    void loadPencairan();
+
+    // Auto-refresh setiap 5 detik untuk near-realtime updates
+    const refreshInterval = setInterval(() => {
+      void loadPencairan();
+    }, 5000);
+
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [loadPencairan]);
 
   const handleAction = (item: Pencairan, actionType: 'approved' | 'rejected') => {
     setSelectedPencairan(item);
@@ -56,9 +63,9 @@ export default function PencairanPage() {
       alert(`Pencairan berhasil ${action === 'approved' ? 'disetujui' : 'ditolak'}!`);
       setShowModal(false);
       setCatatan('');
-      loadPencairan();
-    } catch (error: any) {
-      alert(error.message || 'Gagal memproses pencairan');
+      void loadPencairan();
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal memproses pencairan'));
     }
   };
 
@@ -94,7 +101,7 @@ export default function PencairanPage() {
 
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as any)}
+          onChange={(e) => setFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
           className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
         >
           <option value="pending">Menunggu</option>

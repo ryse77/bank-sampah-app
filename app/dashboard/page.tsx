@@ -1,8 +1,9 @@
 'use client';
 
 import { useAuthStore } from '@/lib/store/authStore';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { clearAllCache } from '@/lib/cache-utils';
+import Image from 'next/image';
 
 interface MenuItem {
   title: string;
@@ -31,8 +32,22 @@ interface Artikel {
   created_at: string;
 }
 
+interface SetoranRow {
+  status?: string;
+  tanggal_setor?: string;
+}
+
+interface PencairanRow {
+  status?: string;
+  nominal?: string;
+}
+
+interface MemberRow {
+  role?: string;
+}
+
 export default function DashboardPage() {
-  const { user, token, logout, _hasHydrated, setAuth } = useAuthStore();
+  const { user, token, _hasHydrated, setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [latestArtikel, setLatestArtikel] = useState<Artikel | null>(null);
@@ -49,7 +64,7 @@ export default function DashboardPage() {
     setoranHariIni: 0
   });
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     if (!user || !token) return;
 
     try {
@@ -71,9 +86,9 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  };
+  }, [user, token, setAuth]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!user || !token) return;
 
     try {
@@ -84,9 +99,9 @@ export default function DashboardPage() {
       });
 
       if (response.ok) {
-        const setorans = await response.json();
-        const total = setorans.filter((s: any) => s.status === 'validated').length;
-        const pending = setorans.filter((s: any) => s.status === 'pending').length;
+        const setorans = (await response.json()) as SetoranRow[];
+        const total = setorans.filter((s) => s.status === 'validated').length;
+        const pending = setorans.filter((s) => s.status === 'pending').length;
 
         setStats(prev => ({
           ...prev,
@@ -97,9 +112,9 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
-  };
+  }, [user, token]);
 
-  const fetchLatestArtikel = async () => {
+  const fetchLatestArtikel = useCallback(async () => {
     if (!user || !token) return;
 
     try {
@@ -119,38 +134,10 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error fetching latest artikel:', error);
     }
-  };
+  }, [user, token]);
 
   // Manual refresh function
-  const handleManualRefresh = async () => {
-    setIsRefreshing(true);
-
-    // Reset stats to 0 first to show fresh data
-    setStats({
-      totalSetoran: 0,
-      pendingValidation: 0,
-      saldoTersedia: 0,
-      totalMember: 0,
-      pengajuanPencairan: 0,
-      totalSetoranAll: 0,
-      totalPencairan: 0,
-      setoranHariIni: 0
-    });
-
-    try {
-      if (user?.role === 'pengguna') {
-        await Promise.all([fetchUserData(), fetchStats(), fetchLatestArtikel()]);
-      } else if (user?.role === 'admin' || user?.role === 'pengelola') {
-        await fetchAdminPengelolaStats();
-      }
-    } catch (error) {
-      console.error('Manual refresh error:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const fetchAdminPengelolaStats = async () => {
+  const fetchAdminPengelolaStats = useCallback(async () => {
     if (!user || !token) return;
     if (user.role !== 'admin' && user.role !== 'pengelola') return;
 
@@ -183,21 +170,21 @@ export default function DashboardPage() {
       });
 
       if (memberResponse.ok) {
-        const members = await memberResponse.json();
+        const members = (await memberResponse.json()) as MemberRow[];
         // Filter: hanya hitung role 'pengguna' saja (exclude admin dan pengelola)
-        const actualMembers = members.filter((m: any) => m.role === 'pengguna');
+        const actualMembers = members.filter((m) => m.role === 'pengguna');
         setStats(prev => ({ ...prev, totalMember: actualMembers.length }));
       }
 
       if (setoranResponse.ok) {
-        const setorans = await setoranResponse.json();
-        const totalValidated = setorans.filter((s: any) => s.status === 'validated').length;
-        const pending = setorans.filter((s: any) => s.status === 'pending').length;
+        const setorans = (await setoranResponse.json()) as SetoranRow[];
+        const totalValidated = setorans.filter((s) => s.status === 'validated').length;
+        const pending = setorans.filter((s) => s.status === 'pending').length;
 
         // Setoran hari ini
         const today = new Date().toISOString().split('T')[0];
-        const setoranToday = setorans.filter((s: any) => {
-          const setoranDate = new Date(s.tanggal_setor).toISOString().split('T')[0];
+        const setoranToday = setorans.filter((s) => {
+          const setoranDate = new Date(s.tanggal_setor ?? '').toISOString().split('T')[0];
           return setoranDate === today;
         }).length;
 
@@ -210,13 +197,13 @@ export default function DashboardPage() {
       }
 
       if (pencairanResponse.ok) {
-        const pencairans = await pencairanResponse.json();
+        const pencairans = (await pencairanResponse.json()) as PencairanRow[];
         const totalApproved = pencairans
-          .filter((p: any) => p.status === 'approved')
-          .reduce((sum: number, p: any) => sum + parseFloat(p.nominal), 0);
+          .filter((p) => p.status === 'approved')
+          .reduce((sum: number, p) => sum + parseFloat(p.nominal ?? '0'), 0);
 
         // Hitung pengajuan pencairan yang pending
-        const pengajuanPending = pencairans.filter((p: any) => p.status === 'pending').length;
+        const pengajuanPending = pencairans.filter((p) => p.status === 'pending').length;
 
         setStats(prev => ({
           ...prev,
@@ -227,9 +214,37 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error fetching admin/pengelola stats:', error);
     }
-  };
+  }, [user, token]);
 
-  const fetchSettings = async () => {
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+
+    // Reset stats to 0 first to show fresh data
+    setStats({
+      totalSetoran: 0,
+      pendingValidation: 0,
+      saldoTersedia: 0,
+      totalMember: 0,
+      pengajuanPencairan: 0,
+      totalSetoranAll: 0,
+      totalPencairan: 0,
+      setoranHariIni: 0
+    });
+
+    try {
+      if (user?.role === 'pengguna') {
+        await Promise.all([fetchUserData(), fetchStats(), fetchLatestArtikel()]);
+      } else if (user?.role === 'admin' || user?.role === 'pengelola') {
+        await fetchAdminPengelolaStats();
+      }
+    } catch (error) {
+      console.error('Manual refresh error:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [user?.role, fetchUserData, fetchStats, fetchLatestArtikel, fetchAdminPengelolaStats]);
+
+  const fetchSettings = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -243,7 +258,7 @@ export default function DashboardPage() {
     } catch (err) {
       console.error('Failed to fetch settings:', err);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     // Tunggu hingga store selesai hydrate dari localStorage
@@ -274,7 +289,7 @@ export default function DashboardPage() {
 
       setIsLoading(false);
     }
-  }, [user, _hasHydrated]);
+  }, [user, _hasHydrated, fetchSettings, fetchUserData, fetchStats, fetchLatestArtikel, fetchAdminPengelolaStats]);
 
   // Auto-refresh data setiap 10 detik untuk real-time updates
   useEffect(() => {
@@ -290,7 +305,7 @@ export default function DashboardPage() {
     }, 10000); // Refresh setiap 10 detik
 
     return () => clearInterval(refreshInterval);
-  }, [user, token, _hasHydrated]);
+  }, [user, token, _hasHydrated, fetchUserData, fetchStats, fetchAdminPengelolaStats]);
 
   // DISABLED SEMENTARA: Supabase Realtime (menyebabkan error)
   // Gunakan polling saja dulu dengan interval yang lebih cepat
@@ -671,9 +686,12 @@ export default function DashboardPage() {
 
                 <div className="bg-gray-50 rounded-lg p-6 mb-4">
                   {user.qr_code ? (
-                    <img
+                    <Image
                       src={user.qr_code}
                       alt="QR Code"
+                      width={256}
+                      height={256}
+                      unoptimized
                       className="w-64 h-64 mx-auto"
                     />
                   ) : (

@@ -19,7 +19,7 @@ const transactionMock = vi.mocked(prisma.$transaction);
 
 describe('POST /api/pencairan/approve/[id]', () => {
   it('returns 400 when saldo is insufficient', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
     transactionMock.mockImplementation(async () => {
       throw new Error('INSUFFICIENT_SALDO');
     });
@@ -30,7 +30,7 @@ describe('POST /api/pencairan/approve/[id]', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any, { params: Promise.resolve({ id: 'pc-1' }) });
+    const res = await POST(req as unknown, { params: Promise.resolve({ id: 'pc-1' }) });
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -38,8 +38,8 @@ describe('POST /api/pencairan/approve/[id]', () => {
   });
 
   it('returns 200 when rejected successfully', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
-    transactionMock.mockResolvedValue(undefined as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
+    transactionMock.mockResolvedValue(undefined as unknown);
 
     const req = new Request('http://localhost/api/pencairan/approve/pc-2', {
       method: 'POST',
@@ -47,7 +47,7 @@ describe('POST /api/pencairan/approve/[id]', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any, { params: Promise.resolve({ id: 'pc-2' }) });
+    const res = await POST(req as unknown, { params: Promise.resolve({ id: 'pc-2' }) });
     const body = await res.json();
 
     expect(res.status).toBe(200);

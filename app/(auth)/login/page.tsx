@@ -4,6 +4,25 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/store/authStore';
 import dynamic from 'next/dynamic';
 
+type LoginResponse = {
+  error?: string;
+  token?: string;
+  user?: {
+    id: string;
+    nama_lengkap: string;
+    email: string;
+    role: 'admin' | 'pengelola' | 'pengguna';
+    saldo?: number;
+    qr_code?: string | null;
+    profile_completed?: boolean;
+    no_hp?: string | null;
+    kelurahan?: string | null;
+    kecamatan?: string | null;
+    kabupaten?: string | null;
+    detail_alamat?: string | null;
+  };
+};
+
 function LoginPageComponent() {
   const { user, _hasHydrated, setAuth } = useAuthStore();
   const [mounted, setMounted] = useState(false);
@@ -64,7 +83,7 @@ function LoginPageComponent() {
       });
 
       const raw = await response.text();
-      let data: any = null;
+      let data: LoginResponse | null = null;
       try {
         data = raw ? JSON.parse(raw) : null;
       } catch {
@@ -84,8 +103,9 @@ function LoginPageComponent() {
 
       // JANGAN set loading false, biarkan loading sampai redirect selesai
       
-    } catch (err: any) {
-      setError(err.message || 'Login gagal');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login gagal';
+      setError(message);
       setLoading(false); // Set false hanya jika error
     }
   };

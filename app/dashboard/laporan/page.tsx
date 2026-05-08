@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { laporanService } from '@/lib/api';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Download, TrendingUp, Users, Wallet, BarChart3, Award, TrendingDown, Trash2, Weight } from 'lucide-react';
 import { useAuthStore } from '@/lib/store/authStore';
 
@@ -30,7 +29,33 @@ interface JenisSampah {
   total_nominal: number;
 }
 
+interface SetoranRow {
+  status?: string;
+  tanggal_validasi?: string;
+  total_harga?: string | number;
+  user_id?: string;
+  users?: {
+    nama_lengkap?: string;
+    email?: string;
+  };
+  jenis_sampah?: string;
+  berat_sampah?: string | number;
+}
+
+interface PencairanRow {
+  status?: string;
+  tanggal_pencairan?: string;
+  nominal?: string | number;
+}
+
 export default function LaporanPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { token } = useAuthStore();
   const [type, setType] = useState<'setoran' | 'pencairan'>('setoran');
   const [startDate, setStartDate] = useState('');
@@ -50,11 +75,7 @@ export default function LaporanPage() {
   const [jenisSampahList, setJenisSampahList] = useState<JenisSampah[]>([]);
   const [totalBeratKeseluruhan, setTotalBeratKeseluruhan] = useState(0);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!token) return;
 
     try {
@@ -80,17 +101,17 @@ export default function LaporanPage() {
 
       if (setoranResponse.ok) {
         const setorans = await setoranResponse.json();
-        const validated = setorans.filter((s: any) => s.status === 'validated');
+        const validated = (setorans as SetoranRow[]).filter((s) => s.status === 'validated');
 
         // Get current month's data
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        const setoranThisMonth = validated.filter((s: any) => {
+        const setoranThisMonth = validated.filter((s) => {
           const date = new Date(s.tanggal_validasi);
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         });
 
-        const totalNominal = validated.reduce((sum: number, s: any) =>
+        const totalNominal = validated.reduce((sum: number, s) =>
           sum + parseFloat(s.total_harga || 0), 0
         );
 
@@ -104,7 +125,7 @@ export default function LaporanPage() {
         // Calculate top 10 members based on last month's income
         const memberEarnings = new Map<string, { nama_lengkap: string; email: string; total: number; count: number }>();
 
-        setoranThisMonth.forEach((s: any) => {
+        setoranThisMonth.forEach((s) => {
           if (s.user_id && s.users) {
             const existing = memberEarnings.get(s.user_id);
             const amount = parseFloat(s.total_harga || 0);
@@ -141,7 +162,7 @@ export default function LaporanPage() {
         const jenisSampahMap = new Map<string, { total_berat: number; count: number; total_nominal: number }>();
         let totalBerat = 0;
 
-        validated.forEach((s: any) => {
+        validated.forEach((s) => {
           if (s.jenis_sampah) {
             const jenis = s.jenis_sampah;
             const berat = parseFloat(s.berat_sampah || 0);
@@ -180,17 +201,17 @@ export default function LaporanPage() {
 
       if (pencairanResponse.ok) {
         const pencairans = await pencairanResponse.json();
-        const approved = pencairans.filter((p: any) => p.status === 'approved');
+        const approved = (pencairans as PencairanRow[]).filter((p) => p.status === 'approved');
 
         // Get current month's data
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-        const pencairanThisMonth = approved.filter((p: any) => {
+        const pencairanThisMonth = approved.filter((p) => {
           const date = new Date(p.tanggal_pencairan);
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         });
 
-        const totalNominal = approved.reduce((sum: number, p: any) =>
+        const totalNominal = approved.reduce((sum: number, p) =>
           sum + parseFloat(p.nominal || 0), 0
         );
 
@@ -206,7 +227,11 @@ export default function LaporanPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    void fetchStats();
+  }, [fetchStats]);
 
   const handleExport = async () => {
     if (!token) {
@@ -254,9 +279,9 @@ export default function LaporanPage() {
       window.URL.revokeObjectURL(blobUrl);
 
       alert('Laporan berhasil diexport!');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Export error:', error);
-      alert(error.message || 'Gagal mengexport laporan');
+      alert(getErrorMessage(error, 'Gagal mengexport laporan'));
     } finally {
       setExporting(false);
     }
@@ -655,7 +680,7 @@ export default function LaporanPage() {
             </label>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={(e) => setType(e.target.value as 'setoran' | 'pencairan')}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             >
               <option value="setoran">Laporan Setoran Sampah</option>
@@ -697,10 +722,11 @@ export default function LaporanPage() {
 
           <button
             onClick={handleExport}
+            disabled={exporting}
             className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
           >
             <Download className="w-5 h-5" />
-            Export ke Excel
+            {exporting ? 'Mengexport...' : 'Export ke Excel'}
           </button>
         </div>
       </div>

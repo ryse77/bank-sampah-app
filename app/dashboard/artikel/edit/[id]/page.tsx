@@ -5,14 +5,38 @@ import { artikelService } from '@/lib/api';
 import { ArrowLeft, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { processAndUploadArticleImage } from '@/lib/image-utils';
 import { useAuthStore } from '@/lib/store/authStore';
+import Image from 'next/image';
+
+type ArtikelImageValue =
+  | {
+      desktop?: string;
+      tablet?: string;
+      mobile?: string;
+    }
+  | string
+  | null;
+
+interface ArtikelRecord {
+  id: string;
+  judul?: string;
+  konten?: string;
+  gambar?: ArtikelImageValue;
+}
 
 export default function EditArtikelPage({ params }: { params: Promise<{ id: string }> }) {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const { token } = useAuthStore();
   const [artikelId, setArtikelId] = useState<string>('');
   const [formData, setFormData] = useState({
     judul: '',
     konten: '',
-    gambar: null as any
+    gambar: null as ArtikelImageValue
   });
   const [existingImage, setExistingImage] = useState<string>('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -38,7 +62,7 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
         setLoadingData(true);
         const response = await artikelService.list(100, 0);
         const data = response?.data ?? [];
-        const artikel = data.find((a: any) => a.id === artikelId);
+        const artikel = data.find((a: ArtikelRecord) => a.id === artikelId);
 
         if (artikel) {
           let gambarValue = artikel.gambar;
@@ -51,7 +75,7 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
               gambarValue = parsed;
               // Tampilkan gambar desktop untuk preview
               displayImage = parsed.desktop || parsed.tablet || parsed.mobile || '';
-            } catch (e) {
+            } catch {
               // Legacy URL string
               displayImage = artikel.gambar;
             }
@@ -121,9 +145,9 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
         try {
           gambarUrls = await processAndUploadArticleImage(imageFile, token);
           setUploadingImage(false);
-        } catch (uploadError: any) {
+        } catch (uploadError: unknown) {
           setUploadingImage(false);
-          throw new Error(`Gagal upload gambar: ${uploadError.message}`);
+          throw new Error(`Gagal upload gambar: ${getErrorMessage(uploadError, 'Unknown error')}`);
         }
       }
 
@@ -135,8 +159,8 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
 
       alert('Artikel berhasil diperbarui!');
       window.location.href = '/dashboard/artikel';
-    } catch (error: any) {
-      setError(error.message || 'Gagal memperbarui artikel');
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Gagal memperbarui artikel'));
       setLoading(false);
     }
   };
@@ -202,9 +226,12 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
             {existingImage && !imagePreview && (
               <div className="mb-4">
                 <p className="text-sm text-gray-600 mb-2">Gambar saat ini:</p>
-                <img
+                <Image
                   src={existingImage}
                   alt="Current"
+                  width={640}
+                  height={320}
+                  unoptimized
                   className="w-full h-48 object-cover rounded-lg"
                 />
               </div>
@@ -214,9 +241,12 @@ export default function EditArtikelPage({ params }: { params: Promise<{ id: stri
               <div className="space-y-1 text-center">
                 {imagePreview ? (
                   <div className="relative">
-                    <img
+                    <Image
                       src={imagePreview}
                       alt="Preview"
+                      width={640}
+                      height={320}
+                      unoptimized
                       className="mx-auto h-48 w-auto rounded-lg"
                     />
                     <button

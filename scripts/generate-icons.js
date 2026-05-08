@@ -13,7 +13,7 @@ async function generateIcons() {
     let sharp;
     try {
       sharp = require('sharp');
-    } catch (error) {
+    } catch {
       console.log('Sharp not found. Please install it: npm install --save-dev sharp');
       console.log('Or manually create icons with these sizes:', iconSizes.map(s => `${s}x${s}`).join(', '));
       console.log('Place them in the public folder with names like: icon-192x192.png');

@@ -19,7 +19,7 @@ const transactionMock = vi.mocked(prisma.$transaction);
 
 describe('POST /api/setoran/validate/[id]', () => {
   it('returns 409 when setoran already processed', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
     transactionMock.mockImplementation(async () => {
       throw new Error('SETORAN_ALREADY_PROCESSED');
     });
@@ -30,7 +30,7 @@ describe('POST /api/setoran/validate/[id]', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any, { params: Promise.resolve({ id: 'abc' }) });
+    const res = await POST(req as unknown, { params: Promise.resolve({ id: 'abc' }) });
     const body = await res.json();
 
     expect(res.status).toBe(409);
@@ -38,8 +38,8 @@ describe('POST /api/setoran/validate/[id]', () => {
   });
 
   it('returns 200 and payload when validated successfully', async () => {
-    requireRoleMock.mockReturnValue({ id: 'pengelola-1', role: 'pengelola' } as any);
-    transactionMock.mockResolvedValue({ id: 'setoran-1', user_id: 'user-1', status: 'pending' } as any);
+    requireRoleMock.mockReturnValue({ id: 'pengelola-1', role: 'pengelola' } as unknown);
+    transactionMock.mockResolvedValue({ id: 'setoran-1', user_id: 'user-1', status: 'pending' } as unknown);
 
     const req = new Request('http://localhost/api/setoran/validate/setoran-1', {
       method: 'POST',
@@ -47,7 +47,7 @@ describe('POST /api/setoran/validate/[id]', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await POST(req as any, { params: Promise.resolve({ id: 'setoran-1' }) });
+    const res = await POST(req as unknown, { params: Promise.resolve({ id: 'setoran-1' }) });
     const body = await res.json();
 
     expect(res.status).toBe(200);

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { artikelService } from '@/lib/api';
 import { BookOpen, Plus, Edit, Trash2 } from 'lucide-react';
 import { getArtikelImageUrl } from '@/lib/artikel-utils';
+import Image from 'next/image';
 
 interface Artikel {
   id: string;
@@ -17,14 +18,17 @@ interface Artikel {
 }
 
 export default function ArtikelPage() {
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   const [artikels, setArtikels] = useState<Artikel[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadArtikels();
-  }, []);
-
-  const loadArtikels = async () => {
+  const loadArtikels = useCallback(async () => {
     try {
       const response = await artikelService.list(100, 0);
       // API mengembalikan { data: [...], pagination: {...} }
@@ -36,7 +40,11 @@ export default function ArtikelPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadArtikels();
+  }, [loadArtikels]);
 
   const handleDelete = async (id: string) => {
     if (!confirm('Yakin ingin menghapus artikel ini?')) return;
@@ -44,9 +52,9 @@ export default function ArtikelPage() {
     try {
       await artikelService.delete(id);
       alert('Artikel berhasil dihapus');
-      loadArtikels();
-    } catch (error: any) {
-      alert(error.message || 'Gagal menghapus artikel');
+      void loadArtikels();
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, 'Gagal menghapus artikel'));
     }
   };
 
@@ -99,9 +107,12 @@ export default function ArtikelPage() {
             >
               {artikel.gambar && getArtikelImageUrl(artikel.gambar) && (
                 <div className="h-48 bg-gray-200 overflow-hidden">
-                  <img
+                  <Image
                     src={getArtikelImageUrl(artikel.gambar, 'tablet')}
                     alt={artikel.judul}
+                    width={640}
+                    height={320}
+                    unoptimized
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />

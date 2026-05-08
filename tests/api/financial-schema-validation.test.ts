@@ -25,7 +25,7 @@ const requireRoleMock = vi.mocked(requireRole);
 
 describe('Financial schema validation', () => {
   it('setoran validate returns 400 for negative numbers', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
     const req = new Request('http://localhost/api/setoran/validate/s1', {
       method: 'POST',
@@ -33,7 +33,7 @@ describe('Financial schema validation', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await validateSetoran(req as any, { params: Promise.resolve({ id: 's1' }) });
+    const res = await validateSetoran(req as unknown, { params: Promise.resolve({ id: 's1' }) });
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -41,7 +41,7 @@ describe('Financial schema validation', () => {
   });
 
   it('pencairan approve returns 400 for invalid status', async () => {
-    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as any);
+    requireRoleMock.mockReturnValue({ id: 'admin-1', role: 'admin' } as unknown);
 
     const req = new Request('http://localhost/api/pencairan/approve/p1', {
       method: 'POST',
@@ -49,7 +49,7 @@ describe('Financial schema validation', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await approvePencairan(req as any, { params: Promise.resolve({ id: 'p1' }) });
+    const res = await approvePencairan(req as unknown, { params: Promise.resolve({ id: 'p1' }) });
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -57,7 +57,7 @@ describe('Financial schema validation', () => {
   });
 
   it('setoran create returns 400 for invalid metode', async () => {
-    requireAuthMock.mockReturnValue({ id: 'u1', role: 'pengguna' } as any);
+    requireAuthMock.mockReturnValue({ id: 'u1', role: 'pengguna' } as unknown);
 
     const req = new Request('http://localhost/api/setoran/create', {
       method: 'POST',
@@ -65,7 +65,7 @@ describe('Financial schema validation', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await createSetoran(req as any);
+    const res = await createSetoran(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -73,7 +73,7 @@ describe('Financial schema validation', () => {
   });
 
   it('pencairan request returns 400 for non-positive nominal', async () => {
-    requireAuthMock.mockReturnValue({ id: 'u1', role: 'pengguna' } as any);
+    requireAuthMock.mockReturnValue({ id: 'u1', role: 'pengguna' } as unknown);
 
     const req = new Request('http://localhost/api/pencairan/request', {
       method: 'POST',
@@ -81,7 +81,7 @@ describe('Financial schema validation', () => {
       headers: { 'content-type': 'application/json' }
     });
 
-    const res = await requestPencairan(req as any);
+    const res = await requestPencairan(req as unknown);
     const body = await res.json();
 
     expect(res.status).toBe(400);
