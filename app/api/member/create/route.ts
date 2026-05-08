@@ -1,9 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import { requireRole } from '@/lib/auth';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { memberCreateSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +16,11 @@ export async function POST(request: NextRequest) {
       return user;
     }
 
-    const body = await request.json();
+    const parsed = await parseRequestBody(request, memberCreateSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
+    }
+
     const {
       nama_lengkap,
       email,
@@ -24,31 +31,7 @@ export async function POST(request: NextRequest) {
       kabupaten,
       detail_alamat,
       role
-    } = body;
-
-    // Validasi input
-    if (!nama_lengkap || !email || !password || !role) {
-      return NextResponse.json(
-        { error: 'Nama lengkap, email, password, dan role wajib diisi' },
-        { status: 400 }
-      );
-    }
-
-    // Validasi role hanya bisa pengguna atau pengelola
-    if (role !== 'pengguna' && role !== 'pengelola') {
-      return NextResponse.json(
-        { error: 'Role hanya bisa pengguna atau pengelola' },
-        { status: 400 }
-      );
-    }
-
-    // Validasi panjang password
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password minimal 8 karakter' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Cek apakah email sudah ada
     const existingUser = await prisma.user.findUnique({
@@ -57,10 +40,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email sudah terdaftar' },
-        { status: 400 }
-      );
+      return apiError('Email sudah terdaftar', 400);
     }
 
     // Hash password
@@ -95,21 +75,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Akun berhasil dibuat',
       user: newUser,
     });
   } catch (error) {
     console.error('Create user error:', error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json(
-        { error: 'Email sudah terdaftar' },
-        { status: 400 }
-      );
+      return apiError('Email sudah terdaftar', 400);
     }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

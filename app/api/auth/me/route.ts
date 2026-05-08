@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 // CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+const NO_CACHE_HEADERS: HeadersInit = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+  Pragma: 'no-cache',
+  Expires: '0'
+};
 
 export async function GET(request: NextRequest) {
   const user = requireAuth(request);
@@ -17,34 +23,22 @@ export async function GET(request: NextRequest) {
     });
 
     if (!userData) {
-      return NextResponse.json(
-        { error: 'User tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiError('User tidak ditemukan', 404);
     }
 
-    const { password, saldo, ...rest } = userData;
+    const { saldo, ...rest } = userData;
     const userWithoutPassword = {
       ...rest,
       saldo: Number(saldo ?? 0),
       profile_completed: userData.profile_completed,
     };
 
-    return NextResponse.json({
+    return apiSuccess({
       user: userWithoutPassword
-    }, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      }
-    });
+    }, { headers: NO_CACHE_HEADERS });
 
   } catch (error) {
     console.error('Get user error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

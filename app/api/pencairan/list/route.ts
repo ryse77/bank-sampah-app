@@ -1,12 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
+import { listPencairanQuerySchema } from '@/lib/validators/api';
 
 // CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// ensure no static caching
+const NO_CACHE_HEADERS: HeadersInit = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+  Pragma: 'no-cache',
+  Expires: '0'
+};
 
 export async function GET(request: NextRequest) {
   const user = requireAuth(request);
@@ -14,9 +20,15 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const parsedQuery = listPencairanQuerySchema.safeParse({
+      status: searchParams.get('status') ?? undefined
+    });
+    if (!parsedQuery.success) {
+      return apiError(parsedQuery.error.issues[0]?.message || 'Query tidak valid', 400);
+    }
+    const status = parsedQuery.data.status;
 
-    const where: Record<string, any> = {};
+    const where: { user_id?: string; status?: string } = {};
     if (user.role === 'pengguna') {
       where.user_id = user.id;
     }
@@ -48,19 +60,10 @@ export async function GET(request: NextRequest) {
       pengelola: pengelola ? { nama_lengkap: pengelola.nama_lengkap } : null
     }));
 
-    return NextResponse.json(formatted, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      }
-    });
+    return apiSuccess(formatted, { headers: NO_CACHE_HEADERS });
 
   } catch (error) {
     console.error('List pencairan error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

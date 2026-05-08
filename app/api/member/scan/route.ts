@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { memberScanSchema } from '@/lib/validators/api';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -10,18 +13,15 @@ export async function POST(request: NextRequest) {
   if (user instanceof Response) return user;
 
   try {
-    const { qr_data } = await request.json();
-
-    if (!qr_data) {
-      return NextResponse.json(
-        { error: 'QR data diperlukan' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, memberScanSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+
+    const { qr_data } = parsed.data;
 
     console.log('[SCAN] Received qr_data:', qr_data);
 
-    // Cari user berdasarkan qr_data (bukan qr_code yang berisi image)
     let foundUser = await prisma.user.findFirst({
       where: {
         qr_data,
@@ -38,13 +38,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!foundUser) {
-      // STEP 2: Extract email dari QR code format lama (USER-timestamp-email atau BANKSAMPAH-email-timestamp)
       let extractedEmail: string | null = null;
 
       if (qr_data.startsWith('USER-')) {
         const parts = qr_data.split('-');
         if (parts.length >= 3) {
-          extractedEmail = parts.slice(2).join('-'); // Handle email dengan dash
+          extractedEmail = parts.slice(2).join('-');
         }
       } else if (qr_data.startsWith('BANKSAMPAH-')) {
         const parts = qr_data.split('-');
@@ -97,15 +96,12 @@ export async function POST(request: NextRequest) {
 
       console.error('[SCAN] Sample users in database:', allUsers);
 
-      return NextResponse.json(
-        { error: 'User tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiError('User tidak ditemukan', 404);
     }
 
     console.log('[SCAN] User found:', foundUser.nama_lengkap, foundUser.email);
 
-    return NextResponse.json({
+    return apiSuccess({
       id: foundUser.id,
       nama_lengkap: foundUser.nama_lengkap,
       email: foundUser.email,
@@ -114,9 +110,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Scan QR error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

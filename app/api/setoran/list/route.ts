@@ -1,19 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
-// CRITICAL: Force dynamic rendering - disable ALL caching
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// ensure no static caching
+const NO_CACHE_HEADERS: HeadersInit = {
+  'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+  Pragma: 'no-cache',
+  Expires: '0'
+};
 
 export async function GET(request: NextRequest) {
   const user = requireAuth(request);
   if (user instanceof Response) return user;
 
   try {
-    const where: Record<string, any> = {};
+    const where: { user_id?: string } = {};
     if (user.role === 'pengguna') {
       where.user_id = user.id;
     }
@@ -36,27 +40,19 @@ export async function GET(request: NextRequest) {
       berat_sampah: rest.berat_sampah !== null && rest.berat_sampah !== undefined ? Number(rest.berat_sampah) : null,
       harga_per_kg: rest.harga_per_kg !== null && rest.harga_per_kg !== undefined ? Number(rest.harga_per_kg) : null,
       total_harga: rest.total_harga !== null && rest.total_harga !== undefined ? Number(rest.total_harga) : null,
-      users: userData ? {
-        nama_lengkap: userData.nama_lengkap,
-        email: userData.email,
-        no_hp: userData.no_hp
-      } : null,
+      users: userData
+        ? {
+            nama_lengkap: userData.nama_lengkap,
+            email: userData.email,
+            no_hp: userData.no_hp
+          }
+        : null,
       pengelola: pengelola ? { nama_lengkap: pengelola.nama_lengkap } : null
     }));
 
-    return NextResponse.json(formatted, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      }
-    });
-
+    return apiSuccess(formatted, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('List setoran error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

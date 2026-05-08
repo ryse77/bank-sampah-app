@@ -1,13 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { registerSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { 
+    const parsed = await parseRequestBody(request, registerSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
+    }
+
+    const {
       nama_lengkap, 
       email, 
       password, 
@@ -16,15 +23,7 @@ export async function POST(request: NextRequest) {
       kecamatan, 
       kabupaten, 
       detail_alamat 
-    } = body;
-
-    // Validasi input
-    if (!nama_lengkap || !email || !password) {
-      return NextResponse.json(
-        { error: 'Data tidak lengkap' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -51,20 +50,17 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Registrasi berhasil',
       userId: user.id,
       profile_completed: false
-    }, { status: 201 });
+    }, 201);
 
   } catch (error) {
     console.error('Register error:', error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json({ error: 'Email sudah terdaftar' }, { status: 400 });
+      return apiError('Email sudah terdaftar', 400);
     }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

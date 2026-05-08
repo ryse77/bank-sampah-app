@@ -1,32 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { checkEmailSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
-
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email diperlukan' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, checkEmailSchema, 'Email diperlukan');
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { email } = parsed.data;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       available: !existingUser,
       message: existingUser ? 'Email sudah terdaftar' : 'Email tersedia'
     });
 
   } catch (error) {
     console.error('Check email error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

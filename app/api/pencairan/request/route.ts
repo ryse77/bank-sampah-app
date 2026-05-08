@@ -1,20 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { pencairanRequestSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   const user = requireAuth(request);
   if (user instanceof Response) return user;
 
   try {
-    const { nominal } = await request.json();
-
-    if (!nominal || nominal <= 0) {
-      return NextResponse.json(
-        { error: 'Nominal tidak valid' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, pencairanRequestSchema, 'Nominal tidak valid');
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { nominal } = parsed.data;
 
     // Check saldo user
     const userData = await prisma.user.findUnique({
@@ -23,17 +23,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!userData) {
-      return NextResponse.json(
-        { error: 'User tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiError('User tidak ditemukan', 404);
     }
 
     if (Number(userData.saldo ?? 0) < nominal) {
-      return NextResponse.json(
-        { error: 'Saldo tidak mencukupi' },
-        { status: 400 }
-      );
+      return apiError('Saldo tidak mencukupi', 400);
     }
 
     // Create pencairan request
@@ -45,19 +39,16 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Permintaan pencairan berhasil dibuat',
       data: {
         ...data,
         nominal: Number(data.nominal)
       }
-    }, { status: 201 });
+    }, 201);
 
   } catch (error) {
     console.error('Request pencairan error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

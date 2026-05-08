@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -13,7 +13,7 @@ export async function GET() {
     });
 
     // Convert array to object for easier access
-    const settings: Record<string, any> = {};
+    const settings: Record<string, { value: string; description: string | null }> = {};
     data?.forEach((setting) => {
       settings[setting.setting_key] = {
         value: setting.setting_value,
@@ -21,13 +21,10 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(settings);
+    return apiSuccess(settings);
 
   } catch (error) {
     console.error('Public settings API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

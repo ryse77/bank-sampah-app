@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { pencairanApproveSchema } from '@/lib/validators/api';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(
   request: NextRequest,
@@ -11,74 +14,76 @@ export async function POST(
 
   try {
     const { id } = await params;
-    const { status, catatan } = await request.json();
-
-    if (!status || !['approved', 'rejected'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Status tidak valid' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, pencairanApproveSchema, 'Status tidak valid');
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { status, catatan } = parsed.data;
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'ID pencairan tidak valid' },
-        { status: 400 }
-      );
-    }
-
-    const pencairan = await prisma.pencairanSaldo.findUnique({
-      where: { id },
-      include: {
-        user: { select: { saldo: true } }
-      }
-    });
-
-    if (!pencairan) {
-      return NextResponse.json(
-        { error: 'Pencairan tidak ditemukan' },
-        { status: 404 }
-      );
-    }
-
-    if (pencairan.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Pencairan sudah diproses' },
-        { status: 400 }
-      );
+      return apiError('ID pencairan tidak valid', 400);
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.pencairanSaldo.update({
+      const pencairan = await tx.pencairanSaldo.findUnique({
         where: { id },
+        select: { id: true, user_id: true, nominal: true, status: true }
+      });
+
+      if (!pencairan) {
+        throw new Error('PENCAIRAN_NOT_FOUND');
+      }
+
+      if (pencairan.status !== 'pending') {
+        throw new Error('PENCAIRAN_ALREADY_PROCESSED');
+      }
+
+      const updatedPencairan = await tx.pencairanSaldo.updateMany({
+        where: { id, status: 'pending' },
         data: {
           status,
           pengelola_id: user.id,
-          tanggal_pencairan: new Date().toISOString(),
+          tanggal_pencairan: new Date(),
           catatan
         }
       });
 
-      if (status === 'approved') {
-        const currentSaldo = Number(pencairan.user?.saldo ?? 0);
-        const newSaldo = currentSaldo - Number(pencairan.nominal);
+      if (updatedPencairan.count !== 1) {
+        throw new Error('PENCAIRAN_ALREADY_PROCESSED');
+      }
 
-        await tx.user.update({
-          where: { id: pencairan.user_id },
-          data: { saldo: newSaldo }
+      if (status === 'approved') {
+        const saldoUpdate = await tx.user.updateMany({
+          where: {
+            id: pencairan.user_id,
+            saldo: { gte: pencairan.nominal }
+          },
+          data: {
+            saldo: { decrement: pencairan.nominal }
+          }
         });
+
+        if (saldoUpdate.count !== 1) {
+          throw new Error('INSUFFICIENT_SALDO');
+        }
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: `Pencairan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}`
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Approve pencairan error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    if (error instanceof Error && error.message === 'PENCAIRAN_NOT_FOUND') {
+      return apiError('Pencairan tidak ditemukan', 404);
+    }
+    if (error instanceof Error && error.message === 'PENCAIRAN_ALREADY_PROCESSED') {
+      return apiError('Pencairan sudah diproses', 409);
+    }
+    if (error instanceof Error && error.message === 'INSUFFICIENT_SALDO') {
+      return apiError('Saldo tidak mencukupi', 400);
+    }
+    return apiError('Internal server error', 500);
   }
 }

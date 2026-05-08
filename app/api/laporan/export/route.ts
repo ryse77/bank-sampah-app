@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import * as XLSX from 'xlsx';
 import { prisma } from '@/lib/prisma';
+import { apiError } from '@/lib/http/response';
+import { laporanExportQuerySchema } from '@/lib/validators/api';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -12,14 +14,25 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'setoran';
-    const startDate = searchParams.get('start_date');
-    const endDate = searchParams.get('end_date');
+    const parsedQuery = laporanExportQuerySchema.safeParse({
+      type: searchParams.get('type') ?? undefined,
+      start_date: searchParams.get('start_date') ?? undefined,
+      end_date: searchParams.get('end_date') ?? undefined
+    });
+    if (!parsedQuery.success) {
+      return apiError(parsedQuery.error.issues[0]?.message || 'Query tidak valid', 400);
+    }
+    const { type, start_date: startDate, end_date: endDate } = parsedQuery.data;
 
-    let data: any[] = [];
+    let data: Array<Record<string, string | number>> = [];
 
     if (type === 'setoran') {
-      const dateFilter: any = {};
+      const dateFilter: {
+        tanggal_setor?: {
+          gte?: Date;
+          lte?: Date;
+        };
+      } = {};
       if (startDate || endDate) {
         dateFilter.tanggal_setor = {};
         if (startDate) dateFilter.tanggal_setor.gte = new Date(startDate);
@@ -49,7 +62,12 @@ export async function GET(request: NextRequest) {
       }));
 
     } else if (type === 'pencairan') {
-      const dateFilter: any = {};
+      const dateFilter: {
+        tanggal_request?: {
+          gte?: Date;
+          lte?: Date;
+        };
+      } = {};
       if (startDate || endDate) {
         dateFilter.tanggal_request = {};
         if (startDate) dateFilter.tanggal_request.gte = new Date(startDate);
@@ -97,9 +115,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Export laporan error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

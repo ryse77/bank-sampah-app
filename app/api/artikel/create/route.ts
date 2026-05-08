@@ -1,28 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { artikelCreateSchema } from '@/lib/validators/api';
+
+const normalizeArtikelGambar = (gambar: unknown): string | null | undefined => {
+  if (gambar === undefined) return undefined;
+  if (gambar === null) return null;
+  if (typeof gambar === 'object') return JSON.stringify(gambar);
+  return gambar;
+};
 
 export async function POST(request: NextRequest) {
   const user = requireRole(request, ['admin']);
   if (user instanceof Response) return user;
 
   try {
-    const { judul, konten, gambar } = await request.json();
-
-    if (!judul || !konten) {
-      return NextResponse.json(
-        { error: 'Judul dan konten harus diisi' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, artikelCreateSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
 
-    // gambar bisa berupa string (legacy URL) atau object dengan multiple sizes
-    let gambarData = gambar;
-    if (typeof gambar === 'object' && gambar !== null) {
-      // Jika gambar adalah object dengan desktop, tablet, mobile URLs
-      // Simpan sebagai JSON string
-      gambarData = JSON.stringify(gambar);
-    }
+    const { judul, konten, gambar } = parsed.data;
+    const gambarData = normalizeArtikelGambar(gambar);
 
     const data = await prisma.artikel.create({
       data: {
@@ -33,16 +34,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Artikel berhasil dibuat',
       data
-    }, { status: 201 });
-
+    }, 201);
   } catch (error) {
     console.error('Create artikel error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

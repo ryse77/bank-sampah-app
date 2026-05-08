@@ -1,18 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { generateToken } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { loginSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email dan password harus diisi' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, loginSchema, 'Email dan password harus diisi');
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { email, password } = parsed.data;
 
     // Cari user berdasarkan email
     const user = await prisma.user.findUnique({
@@ -21,10 +21,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       console.error('User not found');
-      return NextResponse.json(
-        { error: 'Email atau password salah' },
-        { status: 401 }
-      );
+      return apiError('Email atau password salah', 401);
     }
 
     // Verify password
@@ -32,10 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (!isValidPassword) {
       console.error('Invalid password');
-      return NextResponse.json(
-        { error: 'Email atau password salah' },
-        { status: 401 }
-      );
+      return apiError('Email atau password salah', 401);
     }
 
     // Normalize role to expected union
@@ -52,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     console.log('Login successful for:', user.email, 'Role:', user.role);
 
-    return NextResponse.json({
+    return apiSuccess({
       token,
       user: {
         id: user.id,
@@ -72,9 +66,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

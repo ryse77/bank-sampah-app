@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import * as XLSX from 'xlsx';
+import { apiError } from '@/lib/http/response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       Nama: m.nama_lengkap,
       Email: m.email,
       'Nomor HP': m.no_hp || '',
-      'Saldo': Number(m.saldo ?? 0),
+      Saldo: Number(m.saldo ?? 0),
       'Profile Lengkap': m.profile_completed ? 'Ya' : 'Belum',
       'Tanggal Dibuat': new Date(m.created_at).toLocaleString('id-ID'),
     }));
@@ -48,6 +49,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Export member error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError('Internal server error', 500);
   }
 }

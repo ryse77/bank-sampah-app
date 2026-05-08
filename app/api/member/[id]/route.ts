@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -17,14 +18,28 @@ export async function GET(
   try {
     // Get user data
     const userData = await prisma.user.findUnique({
-      where: { id }
+      where: { id },
+      select: {
+        id: true,
+        nama_lengkap: true,
+        email: true,
+        no_hp: true,
+        kelurahan: true,
+        kecamatan: true,
+        kabupaten: true,
+        detail_alamat: true,
+        role: true,
+        qr_code: true,
+        qr_data: true,
+        saldo: true,
+        profile_completed: true,
+        created_at: true,
+        updated_at: true
+      }
     });
 
     if (!userData) {
-      return NextResponse.json(
-        { error: 'Member tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiError('Member tidak ditemukan', 404);
     }
 
     // Get setoran history
@@ -50,7 +65,6 @@ export async function GET(
 
     const sanitizedUser = {
       ...userData,
-      password: undefined,
       saldo: Number(userData.saldo ?? 0)
     };
 
@@ -66,7 +80,7 @@ export async function GET(
       nominal: Number(p.nominal)
     }));
 
-    return NextResponse.json({
+    return apiSuccess({
       user: sanitizedUser,
       stats: {
         totalSetoran,
@@ -79,9 +93,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Member detail error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

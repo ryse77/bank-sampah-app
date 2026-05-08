@@ -1,20 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createSetoranSchema } from '@/lib/validators/api';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export async function POST(request: NextRequest) {
   const user = requireAuth(request);
   if (user instanceof Response) return user;
 
   try {
-    const { jenis_sampah, metode } = await request.json();
-
-    if (!jenis_sampah || !metode) {
-      return NextResponse.json(
-        { error: 'Data tidak lengkap' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, createSetoranSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { jenis_sampah, metode } = parsed.data;
 
     const data = await prisma.setoranSampah.create({
       data: {
@@ -25,16 +25,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Setoran berhasil dibuat',
       data
-    }, { status: 201 });
+    }, 201);
 
   } catch (error) {
     console.error('Create setoran error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

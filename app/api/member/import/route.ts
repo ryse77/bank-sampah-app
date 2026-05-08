@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import QRCode from 'qrcode';
 import * as XLSX from 'xlsx';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: 'File tidak ditemukan' }, { status: 400 });
+      return apiError('File tidak ditemukan', 400);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     const rows: ImportRow[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
 
     if (!rows || rows.length === 0) {
-      return NextResponse.json({ error: 'Tidak ada data di file' }, { status: 400 });
+      return apiError('Tidak ada data di file', 400);
     }
 
     const successes: string[] = [];
@@ -99,12 +100,13 @@ export async function POST(request: NextRequest) {
           }
         });
         successes.push(email);
-      } catch (err: any) {
-        errors.push({ row: rowNumber, email, error: err.message || 'Gagal menyimpan' });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Gagal menyimpan';
+        errors.push({ row: rowNumber, email, error: message });
       }
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Import selesai',
       total: rows.length,
       success: successes.length,
@@ -114,9 +116,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Import error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

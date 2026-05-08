@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError } from '@/lib/http/response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Full export error:', error);
-    return new Response(JSON.stringify({ error: 'Gagal melakukan export data' }), { status: 500 });
+    return apiError('Gagal melakukan export data', 500);
   }
 }

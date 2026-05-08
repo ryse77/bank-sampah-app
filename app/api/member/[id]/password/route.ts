@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { requireRole } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { memberPasswordUpdateSchema } from '@/lib/validators/api';
+import { apiError, apiSuccess } from '@/lib/http/response';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,21 +21,14 @@ export async function PUT(
 
     const { id } = await params;
     if (!id) {
-      return NextResponse.json(
-        { error: 'User ID diperlukan' },
-        { status: 400 }
-      );
+      return apiError('User ID diperlukan', 400);
     }
 
-    const body = await request.json();
-    const { password } = body || {};
-
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password minimal 8 karakter' },
-        { status: 400 }
-      );
+    const parsed = await parseRequestBody(request, memberPasswordUpdateSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
     }
+    const { password } = parsed.data;
 
     const targetUser = await prisma.user.findUnique({
       where: { id },
@@ -40,17 +36,11 @@ export async function PUT(
     });
 
     if (!targetUser) {
-      return NextResponse.json(
-        { error: 'User tidak ditemukan' },
-        { status: 404 }
-      );
+      return apiError('User tidak ditemukan', 404);
     }
 
     if (targetUser.role === 'admin') {
-      return NextResponse.json(
-        { error: 'Tidak dapat mengubah password akun admin' },
-        { status: 403 }
-      );
+      return apiError('Tidak dapat mengubah password akun admin', 403);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -60,14 +50,11 @@ export async function PUT(
       data: { password: hashedPassword }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Password berhasil diperbarui'
     });
   } catch (error) {
     console.error('Update password member error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

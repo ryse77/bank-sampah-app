@@ -1,19 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
+import { parseRequestBody } from '@/lib/validators/parse';
+import { profileCompleteSchema } from '@/lib/validators/api';
 
 export async function POST(request: NextRequest) {
   const user = requireAuth(request);
   if (user instanceof Response) return user;
 
   if (user.role !== 'pengguna') {
-    return NextResponse.json({ error: 'Hanya member yang perlu melengkapi profil' }, { status: 403 });
+    return apiError('Hanya member yang perlu melengkapi profil', 403);
   }
 
   try {
-    const { no_hp, kelurahan, kecamatan, kabupaten, detail_alamat } = await request.json();
+    const parsed = await parseRequestBody(request, profileCompleteSchema);
+    if (!parsed.success) {
+      return apiError(parsed.error, 400);
+    }
+    const { no_hp, kelurahan, kecamatan, kabupaten, detail_alamat } = parsed.data;
 
-    const data: any = { profile_completed: true };
+    const data: {
+      profile_completed: boolean;
+      no_hp?: string | null;
+      kelurahan?: string | null;
+      kecamatan?: string | null;
+      kabupaten?: string | null;
+      detail_alamat?: string | null;
+    } = { profile_completed: true };
     if (no_hp !== undefined) data.no_hp = no_hp || null;
     if (kelurahan !== undefined) data.kelurahan = kelurahan || null;
     if (kecamatan !== undefined) data.kecamatan = kecamatan || null;
@@ -39,7 +53,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    return NextResponse.json({
+    return apiSuccess({
       message: 'Profil berhasil dilengkapi',
       user: {
         ...updated,
@@ -48,6 +62,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Complete profile error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError('Internal server error', 500);
   }
 }

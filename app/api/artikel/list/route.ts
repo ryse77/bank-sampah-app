@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/http/response';
+import { artikelListQuerySchema } from '@/lib/validators/api';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -7,11 +9,15 @@ export const revalidate = 0;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const limit = searchParams.get('limit') || '10';
-    const offset = searchParams.get('offset') || '0';
+    const parsedQuery = artikelListQuerySchema.safeParse({
+      limit: searchParams.get('limit') ?? undefined,
+      offset: searchParams.get('offset') ?? undefined
+    });
+    if (!parsedQuery.success) {
+      return apiError(parsedQuery.error.issues[0]?.message || 'Query tidak valid', 400);
+    }
 
-    const take = parseInt(limit);
-    const skip = parseInt(offset);
+    const { limit: take, offset: skip } = parsedQuery.data;
 
     const [data, count] = await Promise.all([
       prisma.artikel.findMany({
@@ -25,7 +31,7 @@ export async function GET(request: NextRequest) {
       prisma.artikel.count()
     ]);
 
-    return NextResponse.json({
+    return apiSuccess({
       data,
       pagination: {
         total: count,
@@ -36,9 +42,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('List artikel error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }
