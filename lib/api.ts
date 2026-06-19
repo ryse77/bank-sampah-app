@@ -1,7 +1,15 @@
 import { useAuthStore } from './store/authStore';
 import type { Artikel, Setoran, User } from './types';
 
-const API_URL = process.env.NEXT_PUBLIC_APP_URL;
+const getApiBaseUrl = () => {
+  // In the browser, prefer same-origin requests so deploys keep working
+  // across IP/domain/SSL changes without rebuilding for a new public URL.
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+
+  return process.env.NEXT_PUBLIC_APP_URL ?? '';
+};
 
 interface ApiErrorPayload {
   error?: string;
@@ -31,7 +39,7 @@ export async function apiCall<TResponse>(endpoint: string, options: ApiOptions =
   const random = Math.random().toString(36).substring(7);
   const cacheBuster = `_t=${timestamp}&_r=${random}&_v=${Date.now()}`;
   const separator = endpoint.includes('?') ? '&' : '?';
-  const urlWithCacheBuster = `${API_URL}/api${endpoint}${separator}${cacheBuster}`;
+  const urlWithCacheBuster = `${getApiBaseUrl()}/api${endpoint}${separator}${cacheBuster}`;
 
   const response = await fetch(urlWithCacheBuster, {
     ...options,
@@ -192,7 +200,7 @@ export const laporanService = {
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
 
-    return `${process.env.NEXT_PUBLIC_APP_URL}/api/laporan/export?${params.toString()}`;
+    return `${getApiBaseUrl()}/api/laporan/export?${params.toString()}`;
   },
 };
 
